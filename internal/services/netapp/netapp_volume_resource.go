@@ -95,7 +95,6 @@ func resourceNetAppVolume() *pluginsdk.Resource {
 				ValidateFunc: validation.StringInSlice([]string{
 					string(volumes.ServiceLevelPremium),
 					string(volumes.ServiceLevelStandard),
-					string(volumes.ServiceLevelUltra),
 					string(volumes.ServiceLevelFlexible),
 				}, false),
 			},
@@ -739,7 +738,7 @@ func resourceNetAppVolumeCreate(d *pluginsdk.ResourceData, meta interface{}) err
 		if err != nil {
 			return fmt.Errorf("getting snapshot from %s: %+v", id, err)
 		}
-		if model := snapshotResponse.Model; model != nil && model.Id != nil {
+		if model := snapshotResponse.Model; model != nil {
 			snapshotID = *model.Id
 		}
 
