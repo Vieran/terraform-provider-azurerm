@@ -47,10 +47,20 @@ jobs:
       - name: Run azurerm-linter against changed lines
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           # Make the base branch available locally so git merge-base works.
           git fetch --no-tags origin "${BASE_REF}"
-          azurerm-linter --base="origin/${BASE_REF}"
+
+          # actions/checkout with a SHA ref leaves us in detached HEAD. The
+          # linter needs a named branch to identify the diff "target"; without
+          # one it prints "not on a branch (detached HEAD)" and skips analysis.
+          git checkout -B "${HEAD_REF:-pr-head}"
+
+          # NOTE: pass the plain branch name here. The linter internally
+          # prepends "origin/", so passing "origin/main" would resolve to
+          # "origin/origin/main" and fail with "reference not found".
+          azurerm-linter --base="${BASE_REF}"
 
       - name: Guidance on failure
         if: failure()
