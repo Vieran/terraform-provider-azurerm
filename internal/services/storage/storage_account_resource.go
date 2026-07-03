@@ -1645,12 +1645,7 @@ func resourceStorageAccountCreate(d *pluginsdk.ResourceData, meta interface{}) e
 			return err
 		}
 
-		// See: https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview#:~:text=Storage%20accounts%20with%20a%20hierarchical%20namespace%20enabled%20for%20use%20with%20Azure%20Data%20Lake%20Storage%20Gen2%20are%20not%20currently%20supported.
 		isVersioningEnabled := pointer.From(blobProperties.Properties.IsVersioningEnabled)
-		if isVersioningEnabled && isHnsEnabled {
-			return fmt.Errorf("`versioning_enabled` can't be true when `is_hns_enabled` is true")
-		}
-
 		if !isVersioningEnabled {
 			if blobProperties.Properties.RestorePolicy != nil && blobProperties.Properties.RestorePolicy.Enabled {
 				// Otherwise, API returns: "Conflicting feature 'restorePolicy' is enabled. Please disable it and retry."
@@ -1971,10 +1966,6 @@ func resourceStorageAccountUpdate(d *pluginsdk.ResourceData, meta interface{}) e
 		blobProperties, err := expandAccountBlobServiceProperties(accountKind, d.Get("blob_properties").([]interface{}))
 		if err != nil {
 			return err
-		}
-
-		if blobProperties.Properties.IsVersioningEnabled != nil && *blobProperties.Properties.IsVersioningEnabled && d.Get("is_hns_enabled").(bool) {
-			return fmt.Errorf("`versioning_enabled` can't be true when `is_hns_enabled` is true")
 		}
 
 		// Disable restore_policy first. Disabling restore_policy and while setting delete_retention_policy.allow_permanent_delete to true cause error.

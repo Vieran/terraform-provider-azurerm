@@ -706,6 +706,24 @@ func TestAccStorageAccount_blobProperties(t *testing.T) {
 	})
 }
 
+func TestAccStorageAccount_blobPropertiesVersioningWithHnsEnabled(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_storage_account", "test")
+	r := StorageAccountResource{}
+
+	data.ResourceTest(t, r, []acceptance.TestStep{
+		{
+			Config: r.blobPropertiesVersioningWithHnsEnabled(data),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("is_hns_enabled").HasValue("true"),
+				check.That(data.ResourceName).Key("blob_properties.0.change_feed_enabled").HasValue("true"),
+				check.That(data.ResourceName).Key("blob_properties.0.versioning_enabled").HasValue("true"),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
 func TestAccStorageAccount_blobProperties_containerAndLastAccessTimeDisabled(t *testing.T) {
 	data := acceptance.BuildTestData(t, "azurerm_storage_account", "test")
 	r := StorageAccountResource{}
@@ -3092,6 +3110,34 @@ resource "azurerm_storage_account" "test" {
   blob_properties {
     versioning_enabled  = true
     change_feed_enabled = true
+  }
+}
+`, data.RandomInteger, data.Locations.Primary, data.RandomString)
+}
+
+func (r StorageAccountResource) blobPropertiesVersioningWithHnsEnabled(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+provider "azurerm" {
+  features {}
+}
+
+resource "azurerm_resource_group" "test" {
+  name     = "acctestAzureRMSA-%d"
+  location = "%s"
+}
+
+resource "azurerm_storage_account" "test" {
+  name                = "unlikely23exst2acct%s"
+  resource_group_name = azurerm_resource_group.test.name
+
+  location                 = azurerm_resource_group.test.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+  is_hns_enabled           = true
+
+  blob_properties {
+    change_feed_enabled = true
+    versioning_enabled  = true
   }
 }
 `, data.RandomInteger, data.Locations.Primary, data.RandomString)

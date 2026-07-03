@@ -206,7 +206,7 @@ A `blob_properties` block supports the following:
 
 -> **Note:** `restore_policy` can not be configured when `dns_endpoint_type` is `AzureDnsZone`.
 
-* `versioning_enabled` - (Optional) Is versioning enabled? Default to `false`.
+* `versioning_enabled` - (Optional) Whether blob versioning is enabled. Defaults to `false`.
 
 -> **Note:** This field cannot be configured when `kind` is set to `Storage` (V1).
 
