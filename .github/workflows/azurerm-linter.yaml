@@ -1,0 +1,64 @@
+---
+name: azurerm-linter
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    types: ['opened', 'synchronize', 'reopened']
+    paths:
+      - '.github/workflows/azurerm-linter.yaml'
+      - 'internal/**.go'
+      - 'go.mod'
+      - 'go.sum'
+
+concurrency:
+  group: 'azurerm-linter-${{ github.head_ref }}'
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the PR head with full history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          # Full history so the linter can compute the merge-base against
+          # the PR base branch.
+          fetch-depth: 0
+          # Check out the PR head commit (not the auto-generated merge commit)
+          # so the diff matches exactly what the contributor wrote.
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          # The linter uses go/packages to load source code, so it must be
+          # built with the same Go toolchain that the provider is built with.
+          go-version-file: ./.go-version
+
+      - name: Install azurerm-linter
+        # Always pull the newest published rules. Trades reproducibility for
+        # zero-maintenance upgrades; pin to a tag (e.g. @v0.2.5) if a rule
+        # change ever breaks CI unexpectedly.
+        run: go install github.com/qixialu/azurerm-linter@latest
+
+      - name: Run azurerm-linter against changed lines
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          # Make the base branch available locally so git merge-base works.
+          git fetch --no-tags origin "${BASE_REF}"
+          azurerm-linter --base="origin/${BASE_REF}"
+
+      - name: Guidance on failure
+        if: failure()
+        run: |
+          echo "::error::azurerm-linter reported findings."
+          echo ""
+          echo "Reproduce locally with:"
+          echo "  go install github.com/qixialu/azurerm-linter@latest"
+          echo "  azurerm-linter"
+          echo ""
+          echo "Rule reference: https://github.com/QixiaLu/azurerm-linter"
