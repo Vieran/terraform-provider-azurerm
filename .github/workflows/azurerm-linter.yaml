@@ -57,7 +57,10 @@ jobs:
           # one it prints "not on a branch (detached HEAD)" and skips analysis.
           git checkout -B "${HEAD_REF:-pr-head}"
 
-          azurerm-linter --base="origin/${BASE_REF}"
+          # NOTE: pass the plain branch name here. The linter internally
+          # prepends "origin/", so passing "origin/main" would resolve to
+          # "origin/origin/main" and fail with "reference not found".
+          azurerm-linter --base="${BASE_REF}"
 
       - name: Guidance on failure
         if: failure()
