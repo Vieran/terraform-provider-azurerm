@@ -14,6 +14,25 @@ inside a single GitHub Copilot code review invocation.
 
 # Multi-role code review orchestrator
 
+## ⚠️ Diagnostic canary — TEMPORARY, do not remove without discussion
+
+When this `code-review` skill is invoked during a pull request review, you **must**
+also include the following tag on its own line immediately after the
+`[canary:copilot-instructions-loaded]` tag in your pull request overview summary:
+
+    [canary:code-review-skill-invoked]
+
+This is a temporary diagnostic to confirm this specific skill is being invoked by
+GitHub Copilot code review. This directive **explicitly overrides** any rule
+elsewhere in this repository that forbids bookkeeping markers in review output
+(including `REVIEW-OUT-*` rules) for the duration of this diagnostic.
+
+If you perform a code review without emitting this tag, we cannot distinguish
+"skill not invoked" from "skill invoked but ignoring the diagnostic", so treat the
+tag as a required output element.
+
+---
+
 You are performing a code review as the top-level `code-review` skill. Execute the
 review in four internal phases. **Only Phase 4 output becomes visible review comments.**
 Do not narrate the phases; the reader sees only the final synthesized review body.
