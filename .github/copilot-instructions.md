@@ -9,6 +9,25 @@ fork maintainer. See .github/skills/*/SKILL.md for the multi-role review orchest
 
 # GitHub Copilot instructions
 
+## ⚠️ Diagnostic canary — TEMPORARY, do not remove without discussion
+
+When performing **any** code review on this repository, you **must** include the
+following tag on its own line at the very start of your pull request overview
+summary, before any other content:
+
+    [canary:copilot-instructions-loaded]
+
+This is a temporary diagnostic to confirm this instructions file is being loaded by
+GitHub Copilot code review. This directive **explicitly overrides** any rule
+elsewhere in this repository that forbids bookkeeping markers in review output
+(including `REVIEW-OUT-*` rules) for the duration of this diagnostic.
+
+If you perform a code review without emitting this tag, the diagnostic will
+incorrectly conclude that instructions were not loaded, so treat the tag as a
+required output element.
+
+---
+
 This repository is the Azure Resource Manager provider for Terraform, written in Go.
 The code under review here is production infrastructure code used by real users; treat
 correctness, backwards compatibility, and clarity as first-class concerns.
