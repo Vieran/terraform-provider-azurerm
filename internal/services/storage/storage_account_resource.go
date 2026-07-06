@@ -1178,6 +1178,10 @@ func resourceStorageAccount() *pluginsdk.Resource {
 					keys := sortedKeysFromSlice(storageKindsSupportHns)
 					return fmt.Errorf("`is_hns_enabled` can only be used for accounts with `account_kind` set to one of: %+v", strings.Join(keys, " / "))
 				}
+
+				if isHnsEnabled && d.Get("blob_properties.0.change_feed_enabled").(bool) {
+					return errors.New("`blob_properties.0.change_feed_enabled` cannot be set to `true` when `is_hns_enabled` is `true`")
+				}
 				return nil
 			}),
 			pluginsdk.ForceNewIfChange("account_replication_type", func(ctx context.Context, old, new, meta interface{}) bool {
