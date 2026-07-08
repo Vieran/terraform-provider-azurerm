@@ -735,6 +735,35 @@ func TestAccStorageAccount_blobPropertiesChangeFeedWithHnsEnabled(t *testing.T) 
 	})
 }
 
+func TestAccStorageAccount_blobPropertiesVersioningWithBackup(t *testing.T) {
+	// Blob versioning cannot be enabled directly on an HNS (Data Lake Gen2) account at create time, but configuring
+	// operational blob backup enables versioning / change feed on the account in the backend. Once that has happened
+	// the account gets "stuck": the next `blob_properties` update sends `versioning_enabled = false` (the schema
+	// default when the field is omitted) and the Storage API rejects it with a 409, while `versioning_enabled = true`
+	// is rejected by the provider's own HNS validation. The backend-enabled state cannot be reproduced in a single
+	// create, hence the two steps.
+	data := acceptance.BuildTestData(t, "azurerm_storage_account", "test")
+	r := StorageAccountResource{}
+
+	data.ResourceTest(t, r, []acceptance.TestStep{
+		{
+			// Step 1: create the HNS account and configure backup, which enables versioning in the backend.
+			Config: r.blobPropertiesVersioningWithBackup(data, false),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+		{
+			// Step 2: trigger a `blob_properties` update. On current code this fails with a 409 because the provider
+			// sends `versioning_enabled = false`; with the null-passthrough fix this step should succeed.
+			Config: r.blobPropertiesVersioningWithBackup(data, true),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+	})
+}
+
 func TestAccStorageAccount_blobProperties_containerAndLastAccessTimeDisabled(t *testing.T) {
 	data := acceptance.BuildTestData(t, "azurerm_storage_account", "test")
 	r := StorageAccountResource{}
@@ -3178,6 +3207,78 @@ resource "azurerm_storage_account" "test" {
   }
 }
 `, data.RandomInteger, data.Locations.Primary, data.RandomString)
+}
+
+func (r StorageAccountResource) blobPropertiesVersioningWithBackup(data acceptance.TestData, withBlobPropertiesUpdate bool) string {
+	blobProperties := ""
+	if withBlobPropertiesUpdate {
+		blobProperties = `
+  blob_properties {
+    last_access_time_enabled = true
+  }
+`
+	}
+
+	return fmt.Sprintf(`
+provider "azurerm" {
+  features {}
+}
+
+resource "azurerm_resource_group" "test" {
+  name     = "acctestAzureRMSA-%[1]d"
+  location = "%[2]s"
+}
+
+resource "azurerm_storage_account" "test" {
+  name                     = "unlikely23exst2acct%[3]s"
+  resource_group_name      = azurerm_resource_group.test.name
+  location                 = azurerm_resource_group.test.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+  is_hns_enabled           = true
+%[4]s
+}
+
+resource "azurerm_storage_container" "test" {
+  name               = "acctestsc%[1]d"
+  storage_account_id = azurerm_storage_account.test.id
+}
+
+resource "azurerm_data_protection_backup_vault" "test" {
+  name                = "acctest-bv-%[1]d"
+  resource_group_name = azurerm_resource_group.test.name
+  location            = azurerm_resource_group.test.location
+  datastore_type      = "VaultStore"
+  redundancy          = "LocallyRedundant"
+  soft_delete         = "Off"
+
+  identity {
+    type = "SystemAssigned"
+  }
+}
+
+resource "azurerm_role_assignment" "test" {
+  scope                = azurerm_storage_account.test.id
+  role_definition_name = "Storage Account Backup Contributor"
+  principal_id         = azurerm_data_protection_backup_vault.test.identity[0].principal_id
+}
+
+resource "azurerm_data_protection_backup_policy_blob_storage" "test" {
+  name                                   = "acctest-bp-%[1]d"
+  vault_id                               = azurerm_data_protection_backup_vault.test.id
+  operational_default_retention_duration = "P30D"
+}
+
+resource "azurerm_data_protection_backup_instance_blob_storage" "test" {
+  name               = "acctest-bi-%[1]d"
+  location           = azurerm_resource_group.test.location
+  vault_id           = azurerm_data_protection_backup_vault.test.id
+  storage_account_id = azurerm_storage_account.test.id
+  backup_policy_id   = azurerm_data_protection_backup_policy_blob_storage.test.id
+
+  depends_on = [azurerm_role_assignment.test]
+}
+`, data.RandomInteger, data.Locations.Primary, data.RandomString, blobProperties)
 }
 
 func (r StorageAccountResource) restorePolicyMinimal(data acceptance.TestData) string {
