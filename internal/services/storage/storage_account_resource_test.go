@@ -718,35 +718,18 @@ func TestAccStorageAccount_blobPropertiesVersioningWithHnsEnabled(t *testing.T) 
 	})
 }
 
-func TestAccStorageAccount_blobPropertiesChangeFeedWithHnsEnabled(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_storage_account", "test")
-	r := StorageAccountResource{}
-
-	data.ResourceTest(t, r, []acceptance.TestStep{
-		{
-			Config:      r.blobPropertiesChangeFeedWithHnsEnabled(data),
-			ExpectError: regexp.MustCompile("`blob_properties.0.change_feed_enabled` cannot be set to `true` at creation time when `is_hns_enabled` is `true`"),
-		},
-	})
-}
-
 func TestAccStorageAccount_blobPropertiesVersioningWithBackup(t *testing.T) {
-	// `versioning_enabled` / `change_feed_enabled` cannot be enabled on an HNS account at create time, but they can be
-	// enabled on a subsequent update - here operational blob backup is configured first (which turns them on in the
-	// backend), and only then are the properties set to `true`.
 	data := acceptance.BuildTestData(t, "azurerm_storage_account", "test")
 	r := StorageAccountResource{}
 
 	data.ResourceTest(t, r, []acceptance.TestStep{
 		{
-			// Step 1: create the HNS account and configure backup, which enables versioning / change feed in the backend.
 			Config: r.blobPropertiesVersioningWithBackup(data, false),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
 		},
 		{
-			// Step 2: now that the account exists, `versioning_enabled` / `change_feed_enabled` can be set to `true`.
 			Config: r.blobPropertiesVersioningWithBackup(data, true),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
@@ -3175,33 +3158,6 @@ resource "azurerm_storage_account" "test" {
 `, data.RandomInteger, data.Locations.Primary, data.RandomString)
 }
 
-func (r StorageAccountResource) blobPropertiesChangeFeedWithHnsEnabled(data acceptance.TestData) string {
-	return fmt.Sprintf(`
-provider "azurerm" {
-  features {}
-}
-
-resource "azurerm_resource_group" "test" {
-  name     = "acctestAzureRMSA-%d"
-  location = "%s"
-}
-
-resource "azurerm_storage_account" "test" {
-  name                = "unlikely23exst2acct%s"
-  resource_group_name = azurerm_resource_group.test.name
-
-  location                 = azurerm_resource_group.test.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-  is_hns_enabled           = true
-
-  blob_properties {
-    change_feed_enabled = true
-  }
-}
-`, data.RandomInteger, data.Locations.Primary, data.RandomString)
-}
-
 func (r StorageAccountResource) blobPropertiesVersioningWithBackup(data acceptance.TestData, enableVersioning bool) string {
 	blobProperties := ""
 	if enableVersioning {
@@ -3274,6 +3230,12 @@ resource "azurerm_data_protection_backup_instance_data_lake_storage" "test" {
   storage_container_names            = [azurerm_storage_container.test.name]
 
   depends_on = [azurerm_role_assignment.test]
+}
+
+resource "time_sleep" "wait_for_object_replication" {
+  depends_on = [azurerm_data_protection_backup_instance_data_lake_storage.test]
+
+  create_duration = "10m"
 }
 `, data.RandomInteger, data.Locations.Primary, data.RandomString, blobProperties)
 }

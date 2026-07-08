@@ -216,8 +216,6 @@ A `blob_properties` block supports the following:
 
 -> **Note:** This field cannot be configured when `kind` is set to `Storage` (V1).
 
-~> **Note:** When `is_hns_enabled` is `true`, `change_feed_enabled` cannot be set to `true` at creation time. See the [Azure Blob Storage change feed documentation](https://learn.microsoft.com/azure/storage/blobs/storage-blob-change-feed#enable-and-disable-the-change-feed).
-
 * `change_feed_retention_in_days` - (Optional) The duration of change feed events retention in days. The possible values are between 1 and 146000 days (400 years). Setting this to null (or omit this in the configuration file) indicates an infinite retention of the change feed.
 
 -> **Note:** This field cannot be configured when `kind` is set to `Storage` (V1).
