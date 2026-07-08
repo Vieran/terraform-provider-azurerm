@@ -3257,34 +3257,21 @@ resource "azurerm_role_assignment" "test" {
   principal_id         = azurerm_data_protection_backup_vault.test.identity[0].principal_id
 }
 
-resource "azurerm_data_protection_backup_policy_blob_storage" "test" {
-  name                                   = "acctest-bp-%[1]d"
-  vault_id                               = azurerm_data_protection_backup_vault.test.id
-  operational_default_retention_duration = "P30D"
+resource "azurerm_data_protection_backup_policy_data_lake_storage" "test" {
+  name                            = "acctest-bp-%[1]d"
+  data_protection_backup_vault_id = azurerm_data_protection_backup_vault.test.id
+  backup_schedule                 = ["R/2021-05-23T02:30:00+00:00/P1W"]
 
-  backup_repeating_time_intervals  = ["R/2024-05-08T11:30:00+00:00/P1W"]
-  vault_default_retention_duration = "P7D"
-
-  retention_rule {
-    name     = "Monthly"
-    priority = 15
-    life_cycle {
-      duration        = "P6M"
-      data_store_type = "VaultStore"
-    }
-    criteria {
-      days_of_month = [1, 2, 0]
-    }
-  }
+  default_retention_duration = "P4M"
 }
 
-resource "azurerm_data_protection_backup_instance_blob_storage" "test" {
-  name                            = "acctest-bi-%[1]d"
-  location                        = azurerm_resource_group.test.location
-  vault_id                        = azurerm_data_protection_backup_vault.test.id
-  storage_account_id              = azurerm_storage_account.test.id
-  backup_policy_id                = azurerm_data_protection_backup_policy_blob_storage.test.id
-  storage_account_container_names = [azurerm_storage_container.test.name]
+resource "azurerm_data_protection_backup_instance_data_lake_storage" "test" {
+  name                               = "acctest-bi-%[1]d"
+  data_protection_backup_vault_id    = azurerm_data_protection_backup_vault.test.id
+  location                           = azurerm_resource_group.test.location
+  storage_account_id                 = azurerm_storage_account.test.id
+  backup_policy_data_lake_storage_id = azurerm_data_protection_backup_policy_data_lake_storage.test.id
+  storage_container_names            = [azurerm_storage_container.test.name]
 
   depends_on = [azurerm_role_assignment.test]
 }
