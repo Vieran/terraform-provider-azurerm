@@ -712,14 +712,9 @@ func TestAccStorageAccount_blobPropertiesVersioningWithHnsEnabled(t *testing.T) 
 
 	data.ResourceTest(t, r, []acceptance.TestStep{
 		{
-			Config: r.blobPropertiesVersioningWithHnsEnabled(data),
-			Check: acceptance.ComposeTestCheckFunc(
-				check.That(data.ResourceName).ExistsInAzure(r),
-				check.That(data.ResourceName).Key("is_hns_enabled").HasValue("true"),
-				check.That(data.ResourceName).Key("blob_properties.0.versioning_enabled").HasValue("true"),
-			),
+			Config:      r.blobPropertiesVersioningWithHnsEnabled(data),
+			ExpectError: regexp.MustCompile("`blob_properties.0.versioning_enabled` cannot be set to `true` at creation time when `is_hns_enabled` is `true`"),
 		},
-		data.ImportStep(),
 	})
 }
 
@@ -730,35 +725,33 @@ func TestAccStorageAccount_blobPropertiesChangeFeedWithHnsEnabled(t *testing.T) 
 	data.ResourceTest(t, r, []acceptance.TestStep{
 		{
 			Config:      r.blobPropertiesChangeFeedWithHnsEnabled(data),
-			ExpectError: regexp.MustCompile("`blob_properties.0.change_feed_enabled` cannot be set to `true` when `is_hns_enabled` is `true`"),
+			ExpectError: regexp.MustCompile("`blob_properties.0.change_feed_enabled` cannot be set to `true` at creation time when `is_hns_enabled` is `true`"),
 		},
 	})
 }
 
 func TestAccStorageAccount_blobPropertiesVersioningWithBackup(t *testing.T) {
-	// Blob versioning cannot be enabled directly on an HNS (Data Lake Gen2) account at create time, but configuring
-	// operational blob backup enables versioning / change feed on the account in the backend. Once that has happened
-	// the account gets "stuck": the next `blob_properties` update sends `versioning_enabled = false` (the schema
-	// default when the field is omitted) and the Storage API rejects it with a 409, while `versioning_enabled = true`
-	// is rejected by the provider's own HNS validation. The backend-enabled state cannot be reproduced in a single
-	// create, hence the two steps.
+	// `versioning_enabled` / `change_feed_enabled` cannot be enabled on an HNS account at create time, but they can be
+	// enabled on a subsequent update - here operational blob backup is configured first (which turns them on in the
+	// backend), and only then are the properties set to `true`.
 	data := acceptance.BuildTestData(t, "azurerm_storage_account", "test")
 	r := StorageAccountResource{}
 
 	data.ResourceTest(t, r, []acceptance.TestStep{
 		{
-			// Step 1: create the HNS account and configure backup, which enables versioning in the backend.
+			// Step 1: create the HNS account and configure backup, which enables versioning / change feed in the backend.
 			Config: r.blobPropertiesVersioningWithBackup(data, false),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
 		},
 		{
-			// Step 2: trigger a `blob_properties` update. On current code this fails with a 409 because the provider
-			// sends `versioning_enabled = false`; with the null-passthrough fix this step should succeed.
+			// Step 2: now that the account exists, `versioning_enabled` / `change_feed_enabled` can be set to `true`.
 			Config: r.blobPropertiesVersioningWithBackup(data, true),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("blob_properties.0.versioning_enabled").HasValue("true"),
+				check.That(data.ResourceName).Key("blob_properties.0.change_feed_enabled").HasValue("true"),
 			),
 		},
 	})
@@ -3209,12 +3202,13 @@ resource "azurerm_storage_account" "test" {
 `, data.RandomInteger, data.Locations.Primary, data.RandomString)
 }
 
-func (r StorageAccountResource) blobPropertiesVersioningWithBackup(data acceptance.TestData, withBlobPropertiesUpdate bool) string {
+func (r StorageAccountResource) blobPropertiesVersioningWithBackup(data acceptance.TestData, enableVersioning bool) string {
 	blobProperties := ""
-	if withBlobPropertiesUpdate {
+	if enableVersioning {
 		blobProperties = `
   blob_properties {
-    last_access_time_enabled = true
+    versioning_enabled  = true
+    change_feed_enabled = true
   }
 `
 	}

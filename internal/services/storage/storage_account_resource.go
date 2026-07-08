@@ -1179,8 +1179,15 @@ func resourceStorageAccount() *pluginsdk.Resource {
 					return fmt.Errorf("`is_hns_enabled` can only be used for accounts with `account_kind` set to one of: %+v", strings.Join(keys, " / "))
 				}
 
-				if isHnsEnabled && d.Get("blob_properties.0.change_feed_enabled").(bool) {
-					return errors.New("`blob_properties.0.change_feed_enabled` cannot be set to `true` when `is_hns_enabled` is `true`")
+				// On HNS accounts the user cannot enable `versioning_enabled` / `change_feed_enabled` directly
+				// But they can beturned on by the Storage service in the backend (for example when Azure Backup is configured).
+				if d.Id() == "" && isHnsEnabled {
+					if d.Get("blob_properties.0.versioning_enabled").(bool) {
+						return errors.New("`blob_properties.0.versioning_enabled` cannot be set to `true` at creation time when `is_hns_enabled` is `true`")
+					}
+					if d.Get("blob_properties.0.change_feed_enabled").(bool) {
+						return errors.New("`blob_properties.0.change_feed_enabled` cannot be set to `true` at creation time when `is_hns_enabled` is `true`")
+					}
 				}
 				return nil
 			}),
