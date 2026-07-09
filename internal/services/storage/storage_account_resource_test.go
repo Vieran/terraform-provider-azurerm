@@ -3245,9 +3245,10 @@ func (r StorageAccountResource) waitForBlobVersioning(ctx context.Context, clien
 		return err
 	}
 
-	timeout := time.After(60 * time.Minute)
+	nCtx, cancel := context.WithDeadline(ctx, <-time.After(60*time.Minute))
+	defer cancel()
 	for {
-		resp, err := client.Storage.ResourceManager.BlobServices.GetServiceProperties(ctx, *id)
+		resp, err := client.Storage.ResourceManager.BlobServices.GetServiceProperties(nCtx, *id)
 		if err != nil {
 			return fmt.Errorf("retrieving blob properties for %s: %+v", *id, err)
 		}
@@ -3256,10 +3257,8 @@ func (r StorageAccountResource) waitForBlobVersioning(ctx context.Context, clien
 		}
 
 		select {
-		case <-ctx.Done():
+		case <-nCtx.Done():
 			return fmt.Errorf("context cancelled while waiting for versioning to be enabled on %s", *id)
-		case <-timeout:
-			return fmt.Errorf("timed out waiting for the ADLS backup to enable versioning on %s", *id)
 		case <-time.After(1 * time.Minute):
 		}
 	}
