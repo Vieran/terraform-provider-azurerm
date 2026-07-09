@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/go-azure-helpers/lang/pointer"
 	"github.com/hashicorp/go-azure-helpers/lang/response"
@@ -727,6 +728,7 @@ func TestAccStorageAccount_blobPropertiesVersioningWithBackup(t *testing.T) {
 			Config: r.blobPropertiesVersioningWithBackup(data, false),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
+				data.CheckWithClient(r.waitForBlobVersioning),
 			),
 		},
 		{
@@ -3231,13 +3233,36 @@ resource "azurerm_data_protection_backup_instance_data_lake_storage" "test" {
 
   depends_on = [azurerm_role_assignment.test]
 }
-
-resource "time_sleep" "wait_for_object_replication" {
-  depends_on = [azurerm_data_protection_backup_instance_data_lake_storage.test]
-
-  create_duration = "10m"
-}
 `, data.RandomInteger, data.Locations.Primary, data.RandomString, blobProperties)
+}
+
+// waitForBlobVersioning polls the account's blob service properties until versioning has been enabled. ADLS Gen2
+// vaulted backup only turns versioning on in the backend once the first backup has completed, which takes a minimum
+// of 30-40 minutes.
+func (r StorageAccountResource) waitForBlobVersioning(ctx context.Context, client *clients.Client, state *pluginsdk.InstanceState) error {
+	id, err := commonids.ParseStorageAccountID(state.ID)
+	if err != nil {
+		return err
+	}
+
+	timeout := time.After(60 * time.Minute)
+	for {
+		resp, err := client.Storage.ResourceManager.BlobServices.GetServiceProperties(ctx, *id)
+		if err != nil {
+			return fmt.Errorf("retrieving blob properties for %s: %+v", *id, err)
+		}
+		if resp.Model != nil && resp.Model.Properties != nil && pointer.From(resp.Model.Properties.IsVersioningEnabled) {
+			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("context cancelled while waiting for versioning to be enabled on %s", *id)
+		case <-timeout:
+			return fmt.Errorf("timed out waiting for the ADLS backup to enable versioning on %s", *id)
+		case <-time.After(1 * time.Minute):
+		}
+	}
 }
 
 func (r StorageAccountResource) restorePolicyMinimal(data acceptance.TestData) string {
