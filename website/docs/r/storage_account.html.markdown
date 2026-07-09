@@ -210,7 +210,7 @@ A `blob_properties` block supports the following:
 
 -> **Note:** This field cannot be configured when `kind` is set to `Storage` (V1).
 
-~> **Note:** When `is_hns_enabled` is `true`, `versioning_enabled` cannot be set to `true` at creation time. It can be enabled in a subsequent update once the storage account exists.
+~> **Note:** When `is_hns_enabled` is `true`, `versioning_enabled` cannot be set to `true` at creation time.
 
 * `change_feed_enabled` - (Optional) Whether `change feed` is enabled. Defaults to `false`.
 
