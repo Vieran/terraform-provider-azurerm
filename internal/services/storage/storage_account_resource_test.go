@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/go-azure-helpers/lang/pointer"
 	"github.com/hashicorp/go-azure-helpers/lang/response"
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/dataprotection/2025-07-01/backupinstanceresources"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/storage/2025-08-01/storageaccounts"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
@@ -728,7 +729,7 @@ func TestAccStorageAccount_blobPropertiesVersioningWithBackup(t *testing.T) {
 			Config: r.blobPropertiesVersioningWithBackup(data, false),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
-				data.CheckWithClient(r.waitForBlobVersioning),
+				data.CheckWithClientForResource(r.triggerBackupAndWaitForVersioning, "azurerm_data_protection_backup_instance_data_lake_storage.test"),
 			),
 		},
 		{
@@ -3236,30 +3237,45 @@ resource "azurerm_data_protection_backup_instance_data_lake_storage" "test" {
 `, data.RandomInteger, data.Locations.Primary, data.RandomString, blobProperties)
 }
 
-// waitForBlobVersioning polls the account's blob service properties until versioning has been enabled. ADLS Gen2
-// vaulted backup only turns versioning on in the backend once the first backup has completed, which takes a minimum
-// of 30-40 minutes.
-func (r StorageAccountResource) waitForBlobVersioning(ctx context.Context, client *clients.Client, state *pluginsdk.InstanceState) error {
-	id, err := commonids.ParseStorageAccountID(state.ID)
+func (r StorageAccountResource) triggerBackupAndWaitForVersioning(ctx context.Context, client *clients.Client, state *pluginsdk.InstanceState) error {
+	backupInstanceId, err := backupinstanceresources.ParseBackupInstanceID(state.ID)
 	if err != nil {
 		return err
 	}
 
-	nCtx, cancel := context.WithDeadline(ctx, <-time.After(60*time.Minute))
+	storageAccountId, err := commonids.ParseStorageAccountID(state.Attributes["storage_account_id"])
+	if err != nil {
+		return err
+	}
+
+	backupCtx, cancel := context.WithTimeout(ctx, 75*time.Minute)
 	defer cancel()
+
+	adhocBackup := backupinstanceresources.TriggerBackupRequest{
+		BackupRuleOptions: backupinstanceresources.AdHocBackupRuleOptions{
+			RuleName: "BackupRule",
+			TriggerOption: backupinstanceresources.AdhocBackupTriggerOption{
+				RetentionTagOverride: pointer.To("Default"),
+			},
+		},
+	}
+	if err := client.DataProtection.BackupInstanceClient.BackupInstancesAdhocBackupThenPoll(backupCtx, *backupInstanceId, adhocBackup); err != nil {
+		return fmt.Errorf("triggering on-demand backup for %s: %+v", backupInstanceId, err)
+	}
+
 	for {
-		resp, err := client.Storage.ResourceManager.BlobServices.GetServiceProperties(nCtx, *id)
+		resp, err := client.Storage.ResourceManager.BlobServices.GetServiceProperties(backupCtx, *storageAccountId)
 		if err != nil {
-			return fmt.Errorf("retrieving blob properties for %s: %+v", *id, err)
+			return fmt.Errorf("retrieving blob properties for %s: %+v", storageAccountId, err)
 		}
 		if resp.Model != nil && resp.Model.Properties != nil && pointer.From(resp.Model.Properties.IsVersioningEnabled) {
 			return nil
 		}
 
 		select {
-		case <-nCtx.Done():
-			return fmt.Errorf("context cancelled while waiting for versioning to be enabled on %s", *id)
-		case <-time.After(1 * time.Minute):
+		case <-backupCtx.Done():
+			return fmt.Errorf("timed out waiting for versioning to be enabled on %s after the backup completed", storageAccountId)
+		case <-time.After(30 * time.Second):
 		}
 	}
 }
