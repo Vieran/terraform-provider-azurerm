@@ -24,9 +24,11 @@ jobs:
 
       - name: Copy files (no overwrite)
         run: |
-          mkdir -p .github/skills .github/instructions
+          mkdir -p .github/skills .github/instructions .github/prompts
           cp -rn _upstream/.github/skills/.       .github/skills/       || true
           cp -rn _upstream/.github/instructions/. .github/instructions/ || true
+          cp -rn _upstream/.github/prompts/.      .github/prompts/      || true
+          cp -n  _upstream/.github/copilot-instructions.md .github/copilot-instructions.md || true
           rm -rf _upstream
 
       - name: Create Pull Request
