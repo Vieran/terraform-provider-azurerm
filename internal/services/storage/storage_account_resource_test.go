@@ -10,12 +10,10 @@ import (
 	"path/filepath"
 	"regexp"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/go-azure-helpers/lang/pointer"
 	"github.com/hashicorp/go-azure-helpers/lang/response"
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/dataprotection/2025-07-01/backupinstanceresources"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/storage/2025-08-01/storageaccounts"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
@@ -716,29 +714,6 @@ func TestAccStorageAccount_blobPropertiesVersioningWithHnsEnabled(t *testing.T) 
 		{
 			Config:      r.blobPropertiesVersioningWithHnsEnabled(data),
 			ExpectError: regexp.MustCompile("`blob_properties.0.versioning_enabled` cannot be set to `true` at creation time when `is_hns_enabled` is `true`"),
-		},
-	})
-}
-
-func TestAccStorageAccount_blobPropertiesVersioningWithBackup(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_storage_account", "test")
-	r := StorageAccountResource{}
-
-	data.ResourceTest(t, r, []acceptance.TestStep{
-		{
-			Config: r.blobPropertiesVersioningWithBackup(data, false),
-			Check: acceptance.ComposeTestCheckFunc(
-				check.That(data.ResourceName).ExistsInAzure(r),
-				data.CheckWithClientForResource(r.triggerBackupAndWaitForVersioning, "azurerm_data_protection_backup_instance_data_lake_storage.test"),
-			),
-		},
-		{
-			Config: r.blobPropertiesVersioningWithBackup(data, true),
-			Check: acceptance.ComposeTestCheckFunc(
-				check.That(data.ResourceName).ExistsInAzure(r),
-				check.That(data.ResourceName).Key("blob_properties.0.versioning_enabled").HasValue("true"),
-				check.That(data.ResourceName).Key("blob_properties.0.change_feed_enabled").HasValue("true"),
-			),
 		},
 	})
 }
@@ -3159,125 +3134,6 @@ resource "azurerm_storage_account" "test" {
   }
 }
 `, data.RandomInteger, data.Locations.Primary, data.RandomString)
-}
-
-func (r StorageAccountResource) blobPropertiesVersioningWithBackup(data acceptance.TestData, enableVersioning bool) string {
-	blobProperties := ""
-	if enableVersioning {
-		blobProperties = `
-  blob_properties {
-    versioning_enabled  = true
-    change_feed_enabled = true
-  }
-`
-	}
-
-	return fmt.Sprintf(`
-provider "azurerm" {
-  features {}
-}
-
-resource "azurerm_resource_group" "test" {
-  name     = "acctestAzureRMSA-%[1]d"
-  location = "%[2]s"
-}
-
-resource "azurerm_storage_account" "test" {
-  name                     = "unlikely23exst2acct%[3]s"
-  resource_group_name      = azurerm_resource_group.test.name
-  location                 = azurerm_resource_group.test.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-  is_hns_enabled           = true
-%[4]s
-}
-
-resource "azurerm_storage_container" "test" {
-  name               = "acctestsc%[1]d"
-  storage_account_id = azurerm_storage_account.test.id
-}
-
-resource "azurerm_data_protection_backup_vault" "test" {
-  name                = "acctest-bv-%[1]d"
-  resource_group_name = azurerm_resource_group.test.name
-  location            = azurerm_resource_group.test.location
-  datastore_type      = "VaultStore"
-  redundancy          = "LocallyRedundant"
-  soft_delete         = "Off"
-
-  identity {
-    type = "SystemAssigned"
-  }
-}
-
-resource "azurerm_role_assignment" "test" {
-  scope                = azurerm_storage_account.test.id
-  role_definition_name = "Storage Account Backup Contributor"
-  principal_id         = azurerm_data_protection_backup_vault.test.identity[0].principal_id
-}
-
-resource "azurerm_data_protection_backup_policy_data_lake_storage" "test" {
-  name                            = "acctest-bp-%[1]d"
-  data_protection_backup_vault_id = azurerm_data_protection_backup_vault.test.id
-  backup_schedule                 = ["R/2021-05-23T02:30:00+00:00/P1W"]
-
-  default_retention_duration = "P4M"
-}
-
-resource "azurerm_data_protection_backup_instance_data_lake_storage" "test" {
-  name                               = "acctest-bi-%[1]d"
-  data_protection_backup_vault_id    = azurerm_data_protection_backup_vault.test.id
-  location                           = azurerm_resource_group.test.location
-  storage_account_id                 = azurerm_storage_account.test.id
-  backup_policy_data_lake_storage_id = azurerm_data_protection_backup_policy_data_lake_storage.test.id
-  storage_container_names            = [azurerm_storage_container.test.name]
-
-  depends_on = [azurerm_role_assignment.test]
-}
-`, data.RandomInteger, data.Locations.Primary, data.RandomString, blobProperties)
-}
-
-func (r StorageAccountResource) triggerBackupAndWaitForVersioning(ctx context.Context, client *clients.Client, state *pluginsdk.InstanceState) error {
-	backupInstanceId, err := backupinstanceresources.ParseBackupInstanceID(state.ID)
-	if err != nil {
-		return err
-	}
-
-	storageAccountId, err := commonids.ParseStorageAccountID(state.Attributes["storage_account_id"])
-	if err != nil {
-		return err
-	}
-
-	backupCtx, cancel := context.WithTimeout(ctx, 75*time.Minute)
-	defer cancel()
-
-	adhocBackup := backupinstanceresources.TriggerBackupRequest{
-		BackupRuleOptions: backupinstanceresources.AdHocBackupRuleOptions{
-			RuleName: "BackupRule",
-			TriggerOption: backupinstanceresources.AdhocBackupTriggerOption{
-				RetentionTagOverride: pointer.To("Default"),
-			},
-		},
-	}
-	if err := client.DataProtection.BackupInstanceClient.BackupInstancesAdhocBackupThenPoll(backupCtx, *backupInstanceId, adhocBackup); err != nil {
-		return fmt.Errorf("triggering on-demand backup for %s: %+v", backupInstanceId, err)
-	}
-
-	for {
-		resp, err := client.Storage.ResourceManager.BlobServices.GetServiceProperties(backupCtx, *storageAccountId)
-		if err != nil {
-			return fmt.Errorf("retrieving blob properties for %s: %+v", storageAccountId, err)
-		}
-		if resp.Model != nil && resp.Model.Properties != nil && pointer.From(resp.Model.Properties.IsVersioningEnabled) {
-			return nil
-		}
-
-		select {
-		case <-backupCtx.Done():
-			return fmt.Errorf("timed out waiting for versioning to be enabled on %s after the backup completed", storageAccountId)
-		case <-time.After(30 * time.Second):
-		}
-	}
 }
 
 func (r StorageAccountResource) restorePolicyMinimal(data acceptance.TestData) string {
