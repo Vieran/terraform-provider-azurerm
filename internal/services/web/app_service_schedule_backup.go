@@ -99,7 +99,7 @@ func expandAppServiceBackup(input []interface{}) *web.BackupRequest {
 	storageAccountUrl := vals["storage_account_url"].(string)
 	enabled := vals["enabled"].(bool)
 
-	request := &web.BackupRequest{
+	payload := &web.BackupRequest{
 		BackupRequestProperties: &web.BackupRequestProperties{
 			BackupName:        pointer.To(name),
 			StorageAccountURL: pointer.To(storageAccountUrl),
@@ -133,10 +133,10 @@ func expandAppServiceBackup(input []interface{}) *web.BackupRequest {
 			backupSchedule.StartTime = &date.Time{Time: dateTimeToStart}
 		}
 
-		request.BackupSchedule = &backupSchedule
+		payload.BackupSchedule = &backupSchedule
 	}
 
-	return request
+	return payload
 }
 
 func flattenAppServiceBackup(input *web.BackupRequestProperties) []interface{} {

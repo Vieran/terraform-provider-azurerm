@@ -134,7 +134,7 @@ resource "azurerm_app_configuration" "example" {
   }
 
   tags = {
-    environment = "development"
+    environment = "production"
   }
 
   depends_on = [

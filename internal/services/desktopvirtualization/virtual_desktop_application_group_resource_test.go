@@ -155,7 +155,7 @@ resource "azurerm_virtual_desktop_host_pool" "test" {
   location             = azurerm_resource_group.test.location
   resource_group_name  = azurerm_resource_group.test.name
   validate_environment = true
-  description          = "Acceptance Test: A host pool"
+  description          = "A host pool"
   type                 = "Pooled"
   load_balancer_type   = "BreadthFirst"
 }
