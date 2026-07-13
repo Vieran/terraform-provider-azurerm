@@ -2,6 +2,42 @@
 
 Since its inception, the provider has undergone various iterations and changes in convention, as a result there can be legacy by-products within the provider which are inadvertently used as references. This section contains a miscellaneous assortment of current best practices to be aware of when contributing to the provider.
 
+## Case-Insensitive String Comparisons
+
+When adding or modifying a case-insensitive string comparison in Go, use `strings.EqualFold`. Do not convert either operand with `strings.ToLower` or `strings.ToUpper` before comparing with `==` or `!=`.
+
+For example:
+
+```go
+if strings.EqualFold(actual, expected) {
+	// ...
+}
+```
+
+## Formatted Errors
+
+When an error message requires formatting in Go, construct it directly with `fmt.Errorf`. Do not pass the result of `fmt.Sprintf` to `errors.New` or another error constructor.
+
+For example:
+
+```go
+return fmt.Errorf("validating %s: %+v", id, err)
+```
+
+## Control Flow After Terminating Branches
+
+Do not use an `else` block after an `if` branch that ends with `return`, `continue`, `break`, or `panic`. End the branch and place the subsequent control flow after the `if` statement.
+
+For example:
+
+```go
+if err != nil {
+	return err
+}
+
+continueProcessing()
+```
+
 ## Separate Create and Update Methods
 
 Historically the Provider has opted to combine the Create and Update methods due to the behaviour of the Azure API, where the same API is used for both Create and Update, meaning that the same payload has to be sent during both the Creation and Update of the resource.
