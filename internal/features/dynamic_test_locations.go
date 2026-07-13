@@ -19,5 +19,5 @@ import (
 //
 // It's possible to opt into this by setting `ARM_PROVIDER_DYNAMIC_TEST` to `true`.
 func UseDynamicTestLocations() bool {
-	return strings.EqualFold(os.Getenv("ARM_PROVIDER_DYNAMIC_TEST"), "true")
+	return strings.ToLower(os.Getenv("ARM_PROVIDER_DYNAMIC_TEST")) == "true"
 }

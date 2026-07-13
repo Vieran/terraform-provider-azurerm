@@ -18,9 +18,9 @@ import (
 func DeprecatedInFivePointOh(deprecationMessage string) string {
 	if !FivePointOh() {
 		return ""
+	} else {
+		return deprecationMessage
 	}
-
-	return deprecationMessage
 }
 
 // FivePointOh returns whether this provider is running in 5.0 mode
@@ -35,5 +35,5 @@ func DeprecatedInFivePointOh(deprecationMessage string) string {
 // Setting `ARM_FIVEPOINTZERO_BETA` will cause irreversible changes
 // to your state.
 func FivePointOh() bool {
-	return strings.EqualFold(os.Getenv("ARM_FIVEPOINTZERO_BETA"), "true")
+	return strings.ToLower(os.Getenv("ARM_FIVEPOINTZERO_BETA")) == "true"
 }
