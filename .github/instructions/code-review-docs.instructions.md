@@ -7,11 +7,19 @@ applyTo: "website/**"
 
 Reference: [reference-documentation-standards.md](../../contributing/topics/reference-documentation-standards.md).
 
+## Review Evidence
+
+- Derive required/optional/computed status, validation, defaults, ForceNew behavior, conditional constraints, and import ID shape from the current schema and implementation. Do not guess from Azure documentation or a neighboring resource.
+- Documentation must describe the provider surface that exists in the reviewed change, not a preferred future schema. Keep schema-design suggestions non-blocking unless another review rule makes them mandatory.
+
 ## Page Structure
 
 - Resource and data-source pages use frontmatter containing `subcategory`, `layout: "azurerm"`, `page_title`, and a concise `description`.
+- Frontmatter begins on the first line of every reference page.
 - Resource titles use `# azurerm_{name}`; data-source titles use `# Data Source: azurerm_{name}`.
 - Pages contain a short description, Example Usage, Argument Reference, Attributes Reference, and Timeouts. Resource pages also contain Import.
+- The file path and filename match the Terraform name: resources under `website/docs/r/`, data sources under `website/docs/d/`, list resources under `website/docs/list-resources/`, ephemeral resources under `website/docs/ephemeral-resources/`, and provider-defined functions under `website/docs/functions/`.
+- Resource summaries begin with `Manages`; data-source summaries begin with `Gets information about`; list-resource summaries begin with `Lists`; ephemeral-resource summaries begin with `Use this to access information about an existing`. Function summaries describe the implemented transformation or result.
 
 ## Examples
 
@@ -23,6 +31,10 @@ Reference: [reference-documentation-standards.md](../../contributing/topics/refe
 - **Do not include a `terraform` or `provider` block** in resource / data source examples.
 - Use `hcl` code fences for HCL — never `terraform`.
 - Use the most specific code-fence language for other snippets.
+- Resource examples must include all required arguments and declare every referenced resource, data source, and module on the page. Follow references transitively so added scaffolding is also complete.
+- Data-source examples demonstrate lookup of an existing object and may assume that object already exists; do not add resource scaffolding solely to create the lookup target.
+- Do not replace a Terraform reference with an invented literal merely to make an example appear self-contained. Preserve evidence-backed `depends_on` entries and adjacent notes when rewriting an example.
+- Examples must not hard-code passwords, tokens, keys, client secrets, private keys, connection strings, or SAS values. Use an input variable or another non-secret reference.
 
 ## Argument Reference
 
@@ -31,6 +43,11 @@ Reference: [reference-documentation-standards.md](../../contributing/topics/refe
 2. `location`.
 3. Required, alphabetical.
 4. Optional, alphabetical. `tags` is always last.
+
+**Schema parity:**
+- Document every schema argument and required nested block that affects valid configuration; do not document fields absent from the schema.
+- Match the schema shape exactly. Describe object collections as blocks, maps as maps, and primitive lists/sets as collections of values rather than blocks with nested fields.
+- Required/Optional labels, defaults, enum values, ranges, and ForceNew wording must agree with the schema and diff-time behavior.
 
 **Descriptions:**
 - Format: `` * `field_name` - (Required|Optional[, Write-Only]) Description. ``
@@ -50,6 +67,7 @@ Reference: [reference-documentation-standards.md](../../contributing/topics/refe
 ## Attributes Reference
 
 - Order: `id` first, then remaining attributes alphabetical.
+- Document every exported computed attribute and do not list attributes absent from the schema.
 - Descriptions must **not** include possible values or defaults.
 - Block attributes follow the same two-entry pattern (`A ... as defined below.`); subsection order: `id` (if present) then alphabetical.
 
@@ -57,6 +75,7 @@ Reference: [reference-documentation-standards.md](../../contributing/topics/refe
 
 - Document every supported operation in a `## Timeouts` section with its default: normally 30 minutes for resource create/update/delete and 5 minutes for resource or data-source read.
 - Resource pages include a `## Import` section with a copy-pasteable `terraform import` command in a `shell` code fence and a representative Resource ID.
+- Import commands use the `.example` instance name and the all-zero subscription ID placeholder when the ID contains a subscription. The resource ID shape must match the parser used by the importer.
 - Data sources do not have an Import section.
 
 ## Notes
@@ -68,6 +87,7 @@ Reference: [reference-documentation-standards.md](../../contributing/topics/refe
 - Do not use `Info:`, `Important:`, `Be Aware:`, `NOTE`, or omit the colon.
 - **Do not document breaking changes in resource pages.** Minor-version breaking changes go at the top of the changelog; major-version ones go in the upgrade guide (`website/docs/{version}-upgrade-guide.markdown`).
 - Do not add "This property will do X in v5.0" notes for feature-flagged future behavior.
+- Document cross-field requirements, conflicts, and other diff-time constraints that affect whether configuration is valid. Use `~> **Note:**` when omitting the information would lead to a recoverable configuration error.
 
 ## Deprecations & Removals
 
@@ -82,7 +102,15 @@ Reference: [reference-documentation-standards.md](../../contributing/topics/refe
 
 - Docs live under `website/docs/list-resources/`.
 - Page frontmatter uses `layout: "azurerm"`, `page_title: "Azure Resource Manager: azurerm_{name}"`, `subcategory: "{Service}"`, and a concise `description`.
+- The page heading is `# List resource: azurerm_{name}`.
 - Include: description, one or more `list "azurerm_..."` example blocks, and an Argument Reference for the list config (typically `resource_group_name` optional and `subscription_id` optional with the default note).
+
+## Ephemeral Resources & Provider Functions
+
+- Ephemeral-resource frontmatter uses `page_title: "Azure Resource Manager: azurerm_{name}"`. Pages use `# Ephemeral: azurerm_{name}`, include `~> **Note:** Ephemeral Resources are supported in Terraform 1.10 and later.` immediately below the title, and contain Example Usage, Argument Reference, and Attributes Reference. The primary example uses an `ephemeral` block and the page has no Import section.
+- Function frontmatter uses `page_title: "Azure Resource Manager: {name}"`. Pages use `# Function: {name}`, include `~> **Note:** Provider-defined functions are supported in Terraform 1.8 and later, and are available from version 4.0 of the provider.` immediately below the title, and contain Example Usage, Signature, and Arguments. Examples call `provider::azurerm::{name}(...)`.
+- A function example may include `provider "azurerm"` when needed to make a provider-defined function example runnable; the no-provider-block rule remains mandatory for resources, data sources, list resources, and ephemeral resources.
+- Specialized pages use the same required frontmatter keys as other reference pages. Function pages may use an empty `subcategory` when that matches existing function documentation.
 
 ## Style
 

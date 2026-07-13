@@ -7,11 +7,17 @@ applyTo: "internal/**/*_test.go"
 
 Reference: [reference-acceptance-testing.md](../../contributing/topics/reference-acceptance-testing.md).
 
+## Review Evidence
+
+- Use nearby tests for the same service and implementation model as the primary evidence for naming, helper shape, assertions, and scenario setup. Do not invent a new acceptance-test pattern when an established one covers the behavior.
+- Acceptance tests create real Azure resources and may incur cost. Recommend the narrowest relevant run rather than a package-wide or provider-wide acceptance suite.
+
 ## Package & File Layout
 
 - Test files use the `{resource_or_datasource_file}_test.go` naming and live next to the implementation.
 - Package name is the service package **plus `_test` suffix** (e.g. `package aadb2c_test`). Enforced by `make test`. No `Test` suffix on struct names.
 - Each resource / data source has its own test struct: `type {Name}Resource struct{}` or `type {Name}DataSource struct{}`. Config helpers are methods on that struct.
+- A Terraform resource or data source uses one canonical helper type across its main tests, list tests, and generated identity tests. Preserve an established helper name; for a new surface, use the exact type emitted by the Resource Identity generator rather than adding aliases or hand-editing generated tests.
 
 ## Test Naming
 
@@ -45,6 +51,9 @@ More complex resources warrant additional focused tests (enable/disable a block,
 - Add `data.ImportStep(...)` after **every** step that mutates a resource. Pass field names to ignore (`data.ImportStep("password", "database_primary_key")`) for values Azure doesn't return.
 - Use `check.That(data.ResourceName).ExistsInAzure(r)` in resource tests; use `.Key(...).HasValue(...)` for data-source assertions on computed fields.
 - Never assert on user-specified fields as an existence check in a data source — a missing resource fails to find it anyway.
+- Do not add an acceptance test solely for a simple `ValidateFunc` rule that is fully covered by a validator unit test.
+- Add focused `ExpectError` acceptance coverage for `CustomizeDiff` logic that rejects cross-field combinations or Azure-specific invalid configurations. Existing lifecycle tests can cover the valid path unless it needs distinct setup.
+- When an acceptance callback calls an Azure `*ThenPoll` helper, wrap the callback context with `context.WithTimeout` or `context.WithDeadline`; the callback context is not guaranteed to have the deadline required by pollers.
 
 ## Config Style
 
@@ -55,6 +64,7 @@ More complex resources warrant additional focused tests (enable/disable a block,
 - Prefer indexed format specifiers (`%[1]d`, `%[2]s`) when a value is reused.
 - When a config helper is threaded into `fmt.Sprintf` **only once**, pass it directly instead of assigning a temporary variable.
 - `requiresImport` reuses `r.basic(data)` and re-declares the resource as `"import"` referencing `azurerm_..._resource.example.*`.
+- Terraform configuration inside Go strings uses two-space indentation and no tabs. Go formatting and Go tests do not validate embedded HCL formatting.
 
 ## PreCheck Helpers
 
@@ -73,6 +83,7 @@ More complex resources warrant additional focused tests (enable/disable a block,
   ```
 - When the API no longer works, **delete the test file** instead of skipping.
 - When renaming a property, keep one `complete` test using the old name (branched on `features.FivePointOh()` to switch to the new name in major-release mode). Update only the config, not the test case shape, wherever possible.
+- When a provider `features` setting changes Create, Update, Delete, import, overwrite, or destroy semantics, add a focused test for the non-default branch when the existing harness can exercise it. A code-side feature guard alone does not prove that branch.
 
 ## Resource Identity & List Resource Tests
 
@@ -81,6 +92,12 @@ More complex resources warrant additional focused tests (enable/disable a block,
   - `-compare-values` handles fields exposed only via a parent resource ID.
   - `-no-subscription-id` for IDs (e.g. management groups) without that segment.
 - List resource tests provision N (usually via `count`) instances, then run `Query: true` steps with `querycheck.ExpectLength(...)` / `ExpectLengthAtLeast(...)` against the `list.` address. Skip below `tfversion.Version1_14_0` and use `framework.ProtoV5ProviderFactoriesInit(context.Background(), "azurerm")`.
+- When list configuration supports narrowing the scope, cover both the base query and at least one narrowed query. Do not hand-edit generated Resource Identity tests; align the canonical helper or generator input so `go generate` is stable.
+
+## Ephemeral Resources & Provider Functions
+
+- Ephemeral-resource tests live in `*_ephemeral_test.go`, gate below Terraform 1.10, use framework provider factories, and address the object as `ephemeral.azurerm_<name>`. Use the echo-provider/state-check pattern when the ephemeral payload must be asserted.
+- Provider-defined function tests live under `internal/provider/function/`, use `resource.UnitTest`, gate below Terraform 1.8, and assert calls using `provider::azurerm::<name>(...)`; do not use a resource CRUD lifecycle harness.
 
 ## Write-Only Attributes
 

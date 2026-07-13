@@ -7,6 +7,12 @@ applyTo: "internal/**/*.go"
 
 Reference: [contributing/topics/](../../contributing/topics/).
 
+## Review Evidence
+
+- Do not guess Azure SDK field types, required properties, enum values, or nested shapes. Verify them from the generated client/model used by the implementation.
+- Use the nearest same-service implementation as the primary pattern for CRUD shape, schema, expand/flatten, errors, and timeouts. Match the existing implementation model for maintenance work unless the change is an explicit migration.
+- When a rule is not established by contributor guidance, these instructions, or repository evidence, treat it as a design observation rather than a required change.
+
 ## Resource / Data Source Structure
 
 - **Prefer Typed SDK** (`internal/sdk`) for all new resources and data sources. Untyped (raw `terraform-plugin-sdk`) is legacy.
@@ -16,7 +22,9 @@ Reference: [contributing/topics/](../../contributing/topics/).
 - **Create and Update must be separate methods.** Update must use `d.HasChange(s)` / partial payloads to honor `ignore_changes`.
   - Patch/delta updates: set only changed fields via `pointer.To(...)`.
   - Full updates (`CreateOrUpdate`): `Get` first, nil-check `Model` / `Properties`, then mutate.
+- An Update branch must not return after applying one changed field when other updatable fields can be dirty in the same plan. A special-case PUT/PATCH is valid only when it also applies every concurrent change or deliberately forces replacement.
 - Use `{Operation}ThenPoll` for LROs. Prefer PUT (`CreateOrUpdateThenPoll`) over PATCH (`UpdateThenPoll`) when the caller must clear fields — SDK structs use `omitempty` and cannot send explicit `null` on PATCH.
+- When PATCH preserves omitted values, disabling a previously enabled feature must send the API's explicit disabled representation. Omitting the sub-object or pointer can leave residual remote state.
 - Do not introduce `pluginsdk.StateChangeConf`; it is deprecated for service LRO handling. Use an SDK poller or a custom poller.
 - In `Create`, check for existing resource with `client.Get` + `response.WasNotFound`; return `metadata.ResourceRequiresImport` when found (unless `SkipImportCheckOnCreateAndAllowOverwritingExistingResources` is set).
 - In `Read`, on 404 call `metadata.MarkAsGone(id)` (resources) or return `fmt.Errorf("%s was not found", id)` (data sources).
@@ -34,8 +42,16 @@ Reference: [contributing/topics/](../../contributing/topics/).
 - New resources must ship a companion `{name}_resource_list.go` implementing `sdk.FrameworkListWrappedResource` and be registered via `ListResources()`.
 - If Resource Identity is genuinely unsupported (for example, the generator does not support a composite or custom ID), explain why in the PR description.
 - If listing is genuinely unsupported, explain why so a maintainer can apply `allow-without-list` / `list-not-supported`.
+- Adding list support to an existing resource must include Resource Identity, the list implementation, registration, list-query tests, and list-resource docs in the same change.
+- For singleton or get-only resources, do not require a meaningless list resource solely because the generated SDK exposes a list method. Require an explicit singleton/get-only justification and the maintainer-reviewed exception path instead.
 - Callback variants: use `SetIDAndIdentityCallback` instead of `SetIDCallback` when identity is enabled.
 - In a List Resource, if `stream.Result` performs additional API calls after the supplied context is cancelled, capture its deadline before assigning the iterator and create a new context with that deadline inside the iterator.
+
+## Framework-Specialized Surfaces
+
+- Ephemeral resources use the `sdk.EphemeralResource` model with `Metadata`, `Configure`, `Schema`, and `Open`; register them through `Registration.EphemeralResources()`. They require a matching `*_ephemeral_test.go` and page under `website/docs/ephemeral-resources/`.
+- Provider-defined functions live under `internal/provider/function/`, implement the framework function `Metadata`, `Definition`, and `Run` methods, and are registered by the framework provider. They require focused tests and a page under `website/docs/functions/`.
+- Do not review list resources, ephemeral resources, or provider-defined functions as ordinary typed CRUD resources; apply the framework-specific lifecycle and registration model.
 
 ## Resource IDs
 
@@ -68,6 +84,8 @@ Reference: [contributing/topics/](../../contributing/topics/).
 - Numeric arguments specify a range (`IntBetween`, `FloatBetween`).
 - Validate common formats (IP, port, URL, email, ISO8601).
 - Fields with fixed enums use `validation.StringInSlice` with SDK constants (`string(pkg.ConstantValue)`).
+- When the SDK exposes a `PossibleValuesFor...()` helper whose values exactly match the field's accepted set, prefer it to a manually maintained enum list. Use an evidence-backed narrower set when the API operation accepts only a subset.
+- Reuse an established shared validator when it models the full constraint. New non-trivial service-specific validators belong under the service's `validate/` package with a matching unit test; keep an anonymous inline `ValidateFunc` only when it is short, one-off, and immediately readable.
 
 **Schema design** (see `schema-design-considerations.md`):
 - Portal-required fields → `Required` in Terraform unless the API tolerates omission.
@@ -87,7 +105,7 @@ Reference: [contributing/topics/](../../contributing/topics/).
 - Prefer `Default` (if Azure consistently sets the same value) or making the field `Required`.
 - When required, order the flags `Optional`, comment, `Computed`; comment starts with `// NOTE: O+C ` followed by the reason.
 
-**`CustomizeDiff`** using known-after-apply values must use `metadata.ResourceDiff.GetRawConfig().AsValueMap()` and check `.IsNull()` — do not use `Get`/`DecodeDiff` for that comparison. Abstain if the logic requires the unknown value itself.
+**`CustomizeDiff`** using known-after-apply values must use `metadata.ResourceDiff.GetRawConfig().AsValueMap()` and check `.IsNull()` — do not use `Get`/`DecodeDiff` for that comparison. Before calling `LengthInt`, `AsValueSlice`, `AsValueMap`, `Index`, or another shape-inspection method on raw `cty.Value`, check `IsKnown()` and defer validation for unknown values. Abstain if the logic requires the unknown value itself.
 
 - Do not return an error for a valid configuration when only a particular state transition cannot be updated in place. Call `metadata.ResourceDiff.ForceNew("field")` from `CustomizeDiff` so Terraform recreates the resource.
 
@@ -105,7 +123,14 @@ Reference: [contributing/topics/](../../contributing/topics/).
 
 - `pointer.From(x)` instead of manual `if x != nil { … *x }`.
 - `pointer.To(v)` instead of temporary vars for addresses.
-- `pointer.ToEnum[EnumType](s)` for enum type conversions.
+- `pointer.ToEnum[EnumType](s)` for enum conversions at the SDK/API pointer boundary. Do not use enum pointer helpers on Terraform schema, diff, decoded map, or raw configuration values.
+
+## Consistency, Security & Clarity
+
+- When related implementations expose the same concept, such as Linux and Windows variants, compare validation, defaults, state transitions, and error behavior. A divergence is an issue only when the public contract or API semantics should match.
+- Sensitive values must not be written to logs or included in error messages, and must not be persisted in Terraform state unless the schema contract requires it. Do not invent generic security restrictions that are not supported by Azure or provider semantics.
+- Prefer self-documenting code. Comments should explain only non-obvious Azure behavior, SDK workarounds, irreducible business logic, or subtle state handling; comments that narrate assignments, mappings, nil checks, or standard Terraform/Go flow should be removed or replaced with clearer structure.
+- Do not add generic `Creating`, `Reading`, `Updating`, `Deleting`, or import-check logging that duplicates Terraform Core/provider logging. Keep targeted diagnostics only when they add distinct operational value.
 
 ## File Header
 
