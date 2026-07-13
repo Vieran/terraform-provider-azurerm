@@ -4,6 +4,7 @@
 package features
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -27,7 +28,7 @@ func EnhancedValidationEnabled() bool {
 		return !FivePointOh()
 	}
 
-	return strings.EqualFold(value, "true")
+	return strings.ToLower(value) == "true"
 }
 
 // EnhancedValidationLocationsEnabled returns whether Enhanced Validation for Locations is enabled.
@@ -39,7 +40,7 @@ func EnhancedValidationLocationsEnabled() bool {
 	// Check the locations-specific env var first
 	value := os.Getenv("ARM_PROVIDER_ENHANCED_VALIDATION_LOCATIONS")
 	if value != "" {
-		return strings.EqualFold(value, "true")
+		return strings.ToLower(value) == "true"
 	}
 
 	// In 4.x, fall back to the legacy environment variable
@@ -60,7 +61,7 @@ func EnhancedValidationResourceProvidersEnabled() bool {
 	// Check the resource-providers-specific env var first
 	value := os.Getenv("ARM_PROVIDER_ENHANCED_VALIDATION_RESOURCE_PROVIDERS")
 	if value != "" {
-		return strings.EqualFold(value, "true")
+		return strings.ToLower(value) == "true"
 	}
 
 	// In 4.x, fall back to the legacy environment variable
@@ -101,7 +102,7 @@ func ValidateEnhancedValidationEnvVars() error {
 	}
 
 	if len(conflicts) > 0 {
-		return fmt.Errorf("the environment variable `ARM_PROVIDER_ENHANCED_VALIDATION` cannot be set at the same time as %v - please either use the legacy `ARM_PROVIDER_ENHANCED_VALIDATION` or the replacement environment variables, but not both", conflicts)
+		return errors.New(fmt.Sprintf("the environment variable `ARM_PROVIDER_ENHANCED_VALIDATION` cannot be set at the same time as %v - please either use the legacy `ARM_PROVIDER_ENHANCED_VALIDATION` or the replacement environment variables, but not both", conflicts))
 	}
 
 	return nil
@@ -117,7 +118,7 @@ func EnhancedValidationPreflightEnabled() bool {
 		return false
 	}
 
-	return strings.EqualFold(os.Getenv("ARM_PROVIDER_ENHANCED_VALIDATION_PREFLIGHT_ENABLED"), "true")
+	return strings.ToLower(os.Getenv("ARM_PROVIDER_ENHANCED_VALIDATION_PREFLIGHT_ENABLED")) == "true"
 }
 
 // EnhancedValidationLocationFallback returns the location fallback string for Azure Preflight Validation.
@@ -128,6 +129,7 @@ func EnhancedValidationLocationFallback() *string {
 	value := os.Getenv("ARM_PROVIDER_ENHANCED_VALIDATION_LOCATION_FALLBACK")
 	if value != "" {
 		return &value
+	} else {
+		return nil
 	}
-	return nil
 }
