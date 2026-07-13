@@ -1,3 +1,4 @@
+// Container App Environment Storage implementation.
 // Copyright IBM Corp. 2014, 2025
 // SPDX-License-Identifier: MPL-2.0
 
@@ -46,20 +47,20 @@ func (r ContainerAppEnvironmentStorageResource) IDValidationFunc() pluginsdk.Sch
 
 func (r ContainerAppEnvironmentStorageResource) Arguments() map[string]*pluginsdk.Schema {
 	return map[string]*pluginsdk.Schema{
-		"name": {
-			Type:         pluginsdk.TypeString,
-			Required:     true,
-			ForceNew:     true,
-			ValidateFunc: validate.ManagedEnvironmentStorageName,
-			Description:  "The name for this Storage.",
-		},
-
 		"container_app_environment_id": {
 			Type:         pluginsdk.TypeString,
 			Required:     true,
 			ForceNew:     true,
 			ValidateFunc: managedenvironmentsstorages.ValidateManagedEnvironmentID,
 			Description:  "The ID of the Container App Environment to which this storage belongs.",
+		},
+
+		"name": {
+			Type:         pluginsdk.TypeString,
+			Required:     true,
+			ForceNew:     true,
+			ValidateFunc: validate.ManagedEnvironmentStorageName,
+			Description:  "The name for this Storage.",
 		},
 
 		"account_name": {
@@ -133,10 +134,10 @@ func (r ContainerAppEnvironmentStorageResource) Create() sdk.ResourceFunc {
 			id := managedenvironmentsstorages.NewStorageID(metadata.Client.Account.SubscriptionId, containerAppEnvironmentId.ResourceGroupName, containerAppEnvironmentId.ManagedEnvironmentName, storage.Name)
 
 			if !metadata.Client.Features.SkipImportCheckOnCreateAndAllowOverwritingExistingResources {
-				existing, err := client.Get(ctx, id)
-				if err != nil {
+				existing, lookupErr := client.Get(ctx, id)
+				if lookupErr != nil {
 					if !response.WasNotFound(existing.HttpResponse) {
-						return fmt.Errorf("checking for presence of existing %s: %+v", id, err)
+						return fmt.Errorf("checking for presence of existing %s: %+v", id, lookupErr)
 					}
 				}
 				if !response.WasNotFound(existing.HttpResponse) {
@@ -206,7 +207,9 @@ func (r ContainerAppEnvironmentStorageResource) Read() sdk.ResourceFunc {
 			if model := existing.Model; model != nil {
 				if props := model.Properties; props != nil {
 					if azureFile := props.AzureFile; azureFile != nil {
-						state.AccountName = pointer.From(azureFile.AccountName)
+						if azureFile.AccountName != nil {
+							state.AccountName = *azureFile.AccountName
+						}
 						if azureFile.AccessMode != nil {
 							state.AccessMode = string(*azureFile.AccessMode)
 						}
@@ -241,7 +244,7 @@ func (r ContainerAppEnvironmentStorageResource) Delete() sdk.ResourceFunc {
 			}
 
 			if _, err := client.Delete(ctx, *id); err != nil {
-				return fmt.Errorf("deleting %s: %+v", *id, err)
+				return fmt.Errorf("Failed deleting %s: %+v", *id, err)
 			}
 
 			return nil
@@ -267,7 +270,7 @@ func (r ContainerAppEnvironmentStorageResource) Update() sdk.ResourceFunc {
 
 			existing, err := client.Get(ctx, *id)
 			if err != nil {
-				return fmt.Errorf("reading %s for update: %+v", *id, err)
+				return err
 			}
 
 			if existing.Model.Properties == nil || existing.Model.Properties.AzureFile == nil {
