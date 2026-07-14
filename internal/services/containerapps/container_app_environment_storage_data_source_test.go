@@ -37,5 +37,5 @@ data "azurerm_container_app_environment_storage" "test" {
   name                         = azurerm_container_app_environment_storage.test.name
   container_app_environment_id = azurerm_container_app_environment_storage.test.container_app_environment_id
 }
-`, ContainerAppEnvironmentStorageResource{}.basic(data))
+`, ContainerAppEnvironmentStorageResourceTest{}.basic(data))
 }

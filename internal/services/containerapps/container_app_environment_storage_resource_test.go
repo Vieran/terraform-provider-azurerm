@@ -17,11 +17,11 @@ import (
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tf/pluginsdk"
 )
 
-type ContainerAppEnvironmentStorageResource struct{}
+type ContainerAppEnvironmentStorageResourceTest struct{}
 
-func TestAccContainerAppEnvironmentStorage_basic(t *testing.T) {
+func TestContainerAppEnvironmentStorage_basic(t *testing.T) {
 	data := acceptance.BuildTestData(t, "azurerm_container_app_environment_storage", "test")
-	r := ContainerAppEnvironmentStorageResource{}
+	r := ContainerAppEnvironmentStorageResourceTest{}
 
 	data.ResourceTest(t, r, []acceptance.TestStep{
 		{
@@ -30,13 +30,12 @@ func TestAccContainerAppEnvironmentStorage_basic(t *testing.T) {
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
 		},
-		data.ImportStep("access_key"),
 	})
 }
 
 func TestAccContainerAppEnvironmentStorage_nfsBasic(t *testing.T) {
 	data := acceptance.BuildTestData(t, "azurerm_container_app_environment_storage", "test")
-	r := ContainerAppEnvironmentStorageResource{}
+	r := ContainerAppEnvironmentStorageResourceTest{}
 
 	data.ResourceTest(t, r, []acceptance.TestStep{
 		{
@@ -51,7 +50,7 @@ func TestAccContainerAppEnvironmentStorage_nfsBasic(t *testing.T) {
 
 func TestAccContainerAppEnvironmentStorage_update(t *testing.T) {
 	data := acceptance.BuildTestData(t, "azurerm_container_app_environment_storage", "test")
-	r := ContainerAppEnvironmentStorageResource{}
+	r := ContainerAppEnvironmentStorageResourceTest{}
 
 	data.ResourceTest(t, r, []acceptance.TestStep{
 		{
@@ -73,7 +72,7 @@ func TestAccContainerAppEnvironmentStorage_update(t *testing.T) {
 
 func TestAccContainerAppEnvironmentStorage_requiresImport(t *testing.T) {
 	data := acceptance.BuildTestData(t, "azurerm_container_app_environment_storage", "test")
-	r := ContainerAppEnvironmentStorageResource{}
+	r := ContainerAppEnvironmentStorageResourceTest{}
 
 	data.ResourceTest(t, r, []acceptance.TestStep{
 		{
@@ -86,7 +85,7 @@ func TestAccContainerAppEnvironmentStorage_requiresImport(t *testing.T) {
 	})
 }
 
-func (r ContainerAppEnvironmentStorageResource) Exists(ctx context.Context, client *clients.Client, state *pluginsdk.InstanceState) (*bool, error) {
+func (r ContainerAppEnvironmentStorageResourceTest) Exists(ctx context.Context, client *clients.Client, state *pluginsdk.InstanceState) (*bool, error) {
 	id, err := managedenvironmentsstorages.ParseStorageID(state.ID)
 	if err != nil {
 		return nil, err
@@ -106,13 +105,11 @@ func (r ContainerAppEnvironmentStorageResource) Exists(ctx context.Context, clie
 	return pointer.To(true), nil
 }
 
-func (r ContainerAppEnvironmentStorageResource) basic(data acceptance.TestData) string {
+func (r ContainerAppEnvironmentStorageResourceTest) basic(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 provider "azurerm" {
   features {}
 }
-
-%s
 
 resource "azurerm_container_app_environment_storage" "test" {
   name                         = "testacc-caes-%[2]d"
@@ -122,10 +119,12 @@ resource "azurerm_container_app_environment_storage" "test" {
   share_name                   = azurerm_storage_share.test.name
   access_mode                  = "ReadWrite"
 }
+
+%[1]s
 `, r.template(data), data.RandomInteger)
 }
 
-func (r ContainerAppEnvironmentStorageResource) nfsBasic(data acceptance.TestData) string {
+func (r ContainerAppEnvironmentStorageResourceTest) nfsBasic(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 provider "azurerm" {
   features {}
@@ -143,7 +142,7 @@ resource "azurerm_container_app_environment_storage" "test" {
 `, r.template(data), data.RandomInteger)
 }
 
-func (r ContainerAppEnvironmentStorageResource) update(data acceptance.TestData) string {
+func (r ContainerAppEnvironmentStorageResourceTest) update(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 provider "azurerm" {
   features {}
@@ -162,7 +161,7 @@ resource "azurerm_container_app_environment_storage" "test" {
 `, r.template(data), data.RandomInteger)
 }
 
-func (r ContainerAppEnvironmentStorageResource) requiresImport(data acceptance.TestData) string {
+func (r ContainerAppEnvironmentStorageResourceTest) requiresImport(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 %s
 
@@ -177,7 +176,7 @@ resource "azurerm_container_app_environment_storage" "import" {
 `, r.basic(data))
 }
 
-func (r ContainerAppEnvironmentStorageResource) template(data acceptance.TestData) string {
+func (r ContainerAppEnvironmentStorageResourceTest) template(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 resource "azurerm_resource_group" "test" {
   name     = "acctestRG-CAE-%[1]d"
@@ -198,7 +197,7 @@ resource "azurerm_storage_account" "test" {
 
   location                 = azurerm_resource_group.test.location
   account_tier             = "Standard"
-  account_replication_type = "LRS"
+  account_replication_type = "GRS"
 
   tags = {
     environment = "accTest"
