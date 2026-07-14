@@ -207,9 +207,7 @@ func (r ContainerAppEnvironmentStorageResource) Read() sdk.ResourceFunc {
 			if model := existing.Model; model != nil {
 				if props := model.Properties; props != nil {
 					if azureFile := props.AzureFile; azureFile != nil {
-						if azureFile.AccountName != nil {
-							state.AccountName = *azureFile.AccountName
-						}
+						state.AccountName = pointer.From(azureFile.AccountName)
 						if azureFile.AccessMode != nil {
 							state.AccessMode = string(*azureFile.AccessMode)
 						}
