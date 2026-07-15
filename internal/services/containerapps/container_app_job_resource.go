@@ -87,6 +87,7 @@ func (r ContainerAppJobResource) Arguments() map[string]*schema.Schema {
 		"workload_profile_name": {
 			Type:         pluginsdk.TypeString,
 			Optional:     true,
+			Computed:     true,
 			ValidateFunc: validation.StringIsNotEmpty,
 		},
 
