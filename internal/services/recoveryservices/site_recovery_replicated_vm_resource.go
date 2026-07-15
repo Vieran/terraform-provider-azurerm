@@ -419,18 +419,35 @@ func resourceSiteRecoveryReplicatedVMCustomizeDiff(_ context.Context, d *plugins
 	}
 
 	oldRaw, newRaw := d.GetChange("managed_disk")
+	newDisks, ok := newRaw.(*pluginsdk.Set)
+	if !ok {
+		return nil
+	}
+	if err := siteRecoveryReplicatedVMValidateManagedDiskIDs(newDisks.List()); err != nil {
+		return err
+	}
+
 	oldDisks, ok := oldRaw.(*pluginsdk.Set)
 	if !ok || oldDisks.Len() == 0 {
 		return nil
 	}
 
-	newDisks, ok := newRaw.(*pluginsdk.Set)
-	if !ok {
-		return nil
-	}
-
 	if siteRecoveryReplicatedVMManagedDiskChangeRequiresNew(oldDisks.List(), newDisks.List()) {
 		return d.ForceNew("managed_disk")
+	}
+
+	return nil
+}
+
+func siteRecoveryReplicatedVMValidateManagedDiskIDs(disks []interface{}) error {
+	diskIds := make(map[string]struct{}, len(disks))
+	for _, raw := range disks {
+		disk := raw.(map[string]interface{})
+		diskId := strings.ToLower(siteRecoveryReplicatedVMManagedDiskValue(disk, "disk_id"))
+		if _, exists := diskIds[diskId]; exists {
+			return fmt.Errorf("`managed_disk` blocks must have unique `disk_id` values")
+		}
+		diskIds[diskId] = struct{}{}
 	}
 
 	return nil
