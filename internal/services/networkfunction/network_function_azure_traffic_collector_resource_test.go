@@ -118,7 +118,7 @@ func (r NetworkFunctionAzureTrafficCollectorResource) basic(data acceptance.Test
 				%s
 
 resource "azurerm_network_function_azure_traffic_collector" "test" {
-  name                = "acctest-nfatc-%d"
+	name                = "acctest-nfatc-%d"
   resource_group_name = azurerm_resource_group.test.name
   location            = "%s"
 }

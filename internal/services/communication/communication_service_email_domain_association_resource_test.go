@@ -83,6 +83,7 @@ func (r CommunicationServiceEmailDomainAssociationResource) Exists(ctx context.C
 }
 
 func (r CommunicationServiceEmailDomainAssociationResource) basic(data acceptance.TestData) string {
+	template := r.template(data)
 	return fmt.Sprintf(`
 %s
 
@@ -90,7 +91,7 @@ resource "azurerm_communication_service_email_domain_association" "test" {
   communication_service_id = azurerm_communication_service.test.id
   email_service_domain_id  = azurerm_email_communication_service_domain.test.id
 }
-`, r.template(data))
+`, template)
 }
 
 func (r CommunicationServiceEmailDomainAssociationResource) template(data acceptance.TestData) string {

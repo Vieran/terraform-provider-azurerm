@@ -6,6 +6,7 @@ package networkfunction
 import (
 	"context"
 	"fmt"
+	"log"
 	"regexp"
 	"time"
 
@@ -95,6 +96,7 @@ func (r NetworkFunctionAzureTrafficCollectorResource) Create() sdk.ResourceFunc 
 			client := metadata.Client.NetworkFunction.AzureTrafficCollectorsClient
 			subscriptionId := metadata.Client.Account.SubscriptionId
 			id := azuretrafficcollectors.NewAzureTrafficCollectorID(subscriptionId, model.ResourceGroupName, model.Name)
+			log.Printf("[DEBUG] Creating %s", id)
 			if !metadata.Client.Features.SkipImportCheckOnCreateAndAllowOverwritingExistingResources {
 				existing, err := client.Get(ctx, id)
 				if err != nil && !response.WasNotFound(existing.HttpResponse) {
