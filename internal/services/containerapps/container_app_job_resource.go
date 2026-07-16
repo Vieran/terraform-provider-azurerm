@@ -85,8 +85,9 @@ func (r ContainerAppJobResource) Arguments() map[string]*schema.Schema {
 		},
 
 		"workload_profile_name": {
-			Type:         pluginsdk.TypeString,
-			Optional:     true,
+			Type:     pluginsdk.TypeString,
+			Optional: true,
+			// NOTE: O+C Azure return different value for V1 and V2 Container App Env
 			Computed:     true,
 			ValidateFunc: validation.StringIsNotEmpty,
 		},
