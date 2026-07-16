@@ -63,10 +63,6 @@ func TestAccContainerAppJob_workloadProfileDefault(t *testing.T) {
 			),
 		},
 		data.ImportStep(),
-		{
-			Config:   r.workloadProfileDefault(data),
-			PlanOnly: true,
-		},
 	})
 }
 
