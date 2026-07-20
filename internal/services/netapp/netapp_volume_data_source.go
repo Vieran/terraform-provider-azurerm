@@ -52,7 +52,7 @@ func dataSourceNetAppVolume() *pluginsdk.Resource {
 				ValidateFunc: validate.PoolName,
 			},
 
-			"mount_targets": {
+			"mount_target": {
 				Type:     pluginsdk.TypeList,
 				Computed: true,
 				Elem: &pluginsdk.Resource{
@@ -265,8 +265,8 @@ func dataSourceNetAppVolumeRead(d *pluginsdk.ResourceData, meta interface{}) err
 		d.Set("security_style", string(pointer.From(props.SecurityStyle)))
 
 		d.Set("storage_quota_in_gb", props.UsageThreshold/1073741824)
-		if err := d.Set("mount_targets", flattenNetAppVolumeMountTargets(props.MountTargets)); err != nil {
-			return fmt.Errorf("setting `mount_targets`: %+v", err)
+		if err := d.Set("mount_target", flattenNetAppVolumeMountTargets(props.MountTargets)); err != nil {
+			return fmt.Errorf("setting `mount_target`: %+v", err)
 		}
 		if err := d.Set("data_protection_replication", flattenNetAppVolumeDataProtectionReplication(props.DataProtection)); err != nil {
 			return fmt.Errorf("setting `data_protection_replication`: %+v", err)
