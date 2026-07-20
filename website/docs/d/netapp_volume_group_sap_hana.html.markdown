@@ -88,7 +88,7 @@ A `volume` block exports the following:
 
 * `key_vault_private_endpoint_id` - The Private Endpoint ID for Key Vault, which is required when using customer-managed keys.
 
-* `mount_ip_addresses` - A `mount_ip_addresses` block as defined below.
+* `mount_target` - A `mount_target` block as defined below.
 
 * `network_features` - Network features of the volume.
 
@@ -131,6 +131,14 @@ A `export_policy_rule` block exports the following:
 * `unix_read_only` - Is the file system on unix read only?.
 
 * `unix_read_write` - Is the file system on unix read and write?.
+
+---
+
+A `mount_target` block exports the following:
+
+* `ip_address` - The IP address of the mount target.
+
+* `smb_server_fqdn` - The SMB server's Fully Qualified Domain Name (FQDN). This value is empty for SAP HANA application volume groups, which support NFS protocols only.
 
 ---
 

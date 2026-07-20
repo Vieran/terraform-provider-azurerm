@@ -391,6 +391,7 @@ A `volume` block supports the following:
 * `data_protection_replication` - (Optional) A `data_protection_replication` block as defined below. Changing this forces a new Application Volume Group to be created and data will be lost.
 
 ---
+
 A `data_protection_replication` block is used when enabling the Cross-Region Replication (CRR) data protection option by deploying two Azure NetApp Files Volumes, one to be a primary volume and the other one will be the secondary, the secondary will have this block and will reference the primary volume, not all volume spec types are supported, please refer to [Understand Azure NetApp Files application volume group for Oracle](https://learn.microsoft.com/en-us/azure/azure-netapp-files/application-volume-oracle-introduction) for details. Each volume must be in a supported [region pair](https://docs.microsoft.com/azure/azure-netapp-files/cross-region-replication-introduction#supported-region-pairs).
 
 This block supports the following:
@@ -434,6 +435,24 @@ A `export_policy_rule` block supports the following:
 In addition to the Arguments listed above - the following Attributes are exported: 
 
 * `id` - The ID of the Application Volume Group.
+
+* `volume` - A `volume` block as defined below.
+
+---
+
+A `volume` block exports the following:
+
+* `id` - The ID of the NetApp Volume.
+
+* `mount_target` - A `mount_target` block as defined below.
+
+---
+
+A `mount_target` block exports the following:
+
+* `ip_address` - The IP address of the mount target.
+
+* `smb_server_fqdn` - The SMB server's Fully Qualified Domain Name (FQDN). This value is empty for Oracle application volume groups, which support NFS protocols only.
 
 ## Timeouts
 

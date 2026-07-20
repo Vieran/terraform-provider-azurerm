@@ -24,6 +24,8 @@ func TestAccNetAppVolumeGroupSAPHanaDataSource_basic(t *testing.T) {
 				check.That(data.ResourceName).Key("name").Exists(),
 				check.That(data.ResourceName).Key("resource_group_name").Exists(),
 				check.That(data.ResourceName).Key("volume.1.volume_spec_name").HasValue("log"),
+				check.That(data.ResourceName).Key("volume.0.mount_target.0.ip_address").Exists(),
+				check.That(data.ResourceName).Key("volume.0.mount_target.0.smb_server_fqdn").IsEmpty(),
 			),
 		},
 	})

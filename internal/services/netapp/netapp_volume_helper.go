@@ -516,7 +516,7 @@ func flattenNetAppVolumeGroupSAPHanaVolumes(ctx context.Context, input *[]volume
 		}
 
 		if props.MountTargets != nil && len(pointer.From(props.MountTargets)) > 0 {
-			volumeGroupVolume.MountIpAddresses = flattenNetAppVolumeGroupVolumesMountIpAddresses(props.MountTargets)
+			volumeGroupVolume.MountTargets = flattenNetAppVolumeGroupVolumesMountTargets(props.MountTargets)
 		}
 
 		// Getting volume resource directly from standalone volume
@@ -599,7 +599,7 @@ func flattenNetAppVolumeGroupOracleVolumes(ctx context.Context, input *[]volumeg
 		}
 
 		if props.MountTargets != nil && len(pointer.From(props.MountTargets)) > 0 {
-			volumeGroupVolume.MountIpAddresses = flattenNetAppVolumeGroupVolumesMountIpAddresses(props.MountTargets)
+			volumeGroupVolume.MountTargets = flattenNetAppVolumeGroupVolumesMountTargets(props.MountTargets)
 		}
 
 		// Getting volume resource directly from standalone volume
@@ -655,17 +655,18 @@ func flattenNetAppVolumeGroupVolumesExportPolicies(input *[]volumegroups.ExportP
 	return results
 }
 
-func flattenNetAppVolumeGroupVolumesMountIpAddresses(input *[]volumegroups.MountTargetProperties) []string {
-	results := make([]string, 0)
+func flattenNetAppVolumeGroupVolumesMountTargets(input *[]volumegroups.MountTargetProperties) []netAppModels.MountTarget {
+	results := make([]netAppModels.MountTarget, 0)
 
 	if input == nil || len(pointer.From(input)) == 0 {
 		return results
 	}
 
 	for _, item := range pointer.From(input) {
-		if item.IPAddress != nil {
-			results = append(results, pointer.From(item.IPAddress))
-		}
+		results = append(results, netAppModels.MountTarget{
+			IpAddress:     pointer.From(item.IPAddress),
+			SmbServerFqdn: pointer.From(item.SmbServerFqdn),
+		})
 	}
 
 	return results

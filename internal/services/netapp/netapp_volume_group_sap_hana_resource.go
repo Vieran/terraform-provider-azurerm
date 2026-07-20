@@ -238,11 +238,21 @@ func (r NetAppVolumeGroupSAPHanaResource) Arguments() map[string]*pluginsdk.Sche
 						ValidateFunc: validation.StringInSlice(volumegroups.PossibleValuesForNetworkFeatures(), false),
 					},
 
-					"mount_ip_addresses": {
+					"mount_target": {
 						Type:     pluginsdk.TypeList,
 						Computed: true,
-						Elem: &pluginsdk.Schema{
-							Type: pluginsdk.TypeString,
+						Elem: &pluginsdk.Resource{
+							Schema: map[string]*pluginsdk.Schema{
+								"ip_address": {
+									Type:     pluginsdk.TypeString,
+									Computed: true,
+								},
+
+								"smb_server_fqdn": {
+									Type:     pluginsdk.TypeString,
+									Computed: true,
+								},
+							},
 						},
 					},
 

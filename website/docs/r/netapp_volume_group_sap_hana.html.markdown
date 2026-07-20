@@ -599,6 +599,24 @@ In addition to the Arguments listed above - the following Attributes are exporte
 
 * `id` - The ID of the Application Volume Group.
 
+* `volume` - A `volume` block as defined below.
+
+---
+
+A `volume` block exports the following:
+
+* `id` - The ID of the NetApp Volume.
+
+* `mount_target` - A `mount_target` block as defined below.
+
+---
+
+A `mount_target` block exports the following:
+
+* `ip_address` - The IP address of the mount target.
+
+* `smb_server_fqdn` - The SMB server's Fully Qualified Domain Name (FQDN). This value is empty for SAP HANA application volume groups, which support NFS protocols only.
+
 ## Timeouts
 
 The `timeouts` block allows you to specify [timeouts](https://developer.hashicorp.com/terraform/language/resources/configure#define-operation-timeouts) for certain actions:

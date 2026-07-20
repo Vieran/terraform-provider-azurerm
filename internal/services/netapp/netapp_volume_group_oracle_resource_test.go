@@ -29,6 +29,8 @@ func TestAccNetAppVolumeGroupOracle_basicAvailabilityZone(t *testing.T) {
 			Config: r.basicAvailabilityZone(data),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("volume.0.mount_target.0.ip_address").Exists(),
+				check.That(data.ResourceName).Key("volume.0.mount_target.0.smb_server_fqdn").IsEmpty(),
 			),
 		},
 		data.ImportStep(),

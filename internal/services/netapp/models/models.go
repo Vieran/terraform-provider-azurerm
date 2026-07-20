@@ -25,6 +25,11 @@ type NetAppAccountEncryptionDataSourceModel struct {
 	CrossTenantKeyVaultResourceID     string `tfschema:"cross_tenant_key_vault_resource_id"`
 }
 
+type MountTarget struct {
+	IpAddress     string `tfschema:"ip_address"`
+	SmbServerFqdn string `tfschema:"smb_server_fqdn"`
+}
+
 type NetAppVolumeGroupSAPHanaVolume struct {
 	Id                           string                         `tfschema:"id"`
 	Name                         string                         `tfschema:"name"`
@@ -41,7 +46,7 @@ type NetAppVolumeGroupSAPHanaVolume struct {
 	ProximityPlacementGroupId    string                         `tfschema:"proximity_placement_group_id"`
 	VolumeSpecName               string                         `tfschema:"volume_spec_name"`
 	ExportPolicy                 []ExportPolicyRule             `tfschema:"export_policy_rule"`
-	MountIpAddresses             []string                       `tfschema:"mount_ip_addresses"`
+	MountTargets                 []MountTarget                  `tfschema:"mount_target"`
 	DataProtectionReplication    []DataProtectionReplication    `tfschema:"data_protection_replication"`
 	DataProtectionSnapshotPolicy []DataProtectionSnapshotPolicy `tfschema:"data_protection_snapshot_policy"`
 	Zone                         string                         `tfschema:"zone"`
@@ -86,7 +91,7 @@ type NetAppVolumeGroupOracleVolume struct {
 	ProximityPlacementGroupId    string                         `tfschema:"proximity_placement_group_id"`
 	VolumeSpecName               string                         `tfschema:"volume_spec_name"`
 	ExportPolicy                 []ExportPolicyRule             `tfschema:"export_policy_rule"`
-	MountIpAddresses             []string                       `tfschema:"mount_ip_addresses"`
+	MountTargets                 []MountTarget                  `tfschema:"mount_target"`
 	DataProtectionReplication    []DataProtectionReplication    `tfschema:"data_protection_replication"`
 	DataProtectionSnapshotPolicy []DataProtectionSnapshotPolicy `tfschema:"data_protection_snapshot_policy"`
 	Zone                         string                         `tfschema:"zone"`
