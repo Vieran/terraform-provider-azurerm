@@ -14,14 +14,13 @@ import (
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/location"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/netapp/2025-12-01/volumes"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/clients"
-	"github.com/hashicorp/terraform-provider-azurerm/internal/features"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/services/netapp/validate"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tf/pluginsdk"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/timeouts"
 )
 
 func dataSourceNetAppVolume() *pluginsdk.Resource {
-	resource := &pluginsdk.Resource{
+	return &pluginsdk.Resource{
 		Read: dataSourceNetAppVolumeRead,
 
 		Timeouts: &pluginsdk.ResourceTimeout{
@@ -200,19 +199,6 @@ func dataSourceNetAppVolume() *pluginsdk.Resource {
 			},
 		},
 	}
-
-	if !features.FivePointOh() {
-		resource.Schema["mount_ip_addresses"] = &pluginsdk.Schema{
-			Type:     pluginsdk.TypeList,
-			Computed: true,
-			Elem: &pluginsdk.Schema{
-				Type: pluginsdk.TypeString,
-			},
-			Deprecated: "This property has been deprecated in favour of `mount_targets` and will be removed in version 5.0 of the Provider.",
-		}
-	}
-
-	return resource
 }
 
 func dataSourceNetAppVolumeRead(d *pluginsdk.ResourceData, meta interface{}) error {
@@ -279,11 +265,6 @@ func dataSourceNetAppVolumeRead(d *pluginsdk.ResourceData, meta interface{}) err
 		d.Set("security_style", string(pointer.From(props.SecurityStyle)))
 
 		d.Set("storage_quota_in_gb", props.UsageThreshold/1073741824)
-		if !features.FivePointOh() {
-			if err := d.Set("mount_ip_addresses", flattenNetAppVolumeMountIPAddresses(props.MountTargets)); err != nil {
-				return fmt.Errorf("setting `mount_ip_addresses`: %+v", err)
-			}
-		}
 		if err := d.Set("mount_targets", flattenNetAppVolumeMountTargets(props.MountTargets)); err != nil {
 			return fmt.Errorf("setting `mount_targets`: %+v", err)
 		}

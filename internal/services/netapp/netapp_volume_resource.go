@@ -621,15 +621,6 @@ func resourceNetAppVolume() *pluginsdk.Resource {
 				}, false),
 			},
 		}
-
-		resource.Schema["mount_ip_addresses"] = &pluginsdk.Schema{
-			Type:     pluginsdk.TypeList,
-			Computed: true,
-			Elem: &pluginsdk.Schema{
-				Type: pluginsdk.TypeString,
-			},
-			Deprecated: "This property has been deprecated in favour of `mount_targets` and will be removed in version 5.0 of the Provider.",
-		}
 	}
 
 	return resource
@@ -1172,11 +1163,6 @@ func resourceNetAppVolumeRead(d *pluginsdk.ResourceData, meta interface{}) error
 		if err := d.Set("export_policy_rule", flattenNetAppVolumeExportPolicyRule(props.ExportPolicy)); err != nil {
 			return fmt.Errorf("setting `export_policy_rule`: %+v", err)
 		}
-		if !features.FivePointOh() {
-			if err := d.Set("mount_ip_addresses", flattenNetAppVolumeMountIPAddresses(props.MountTargets)); err != nil {
-				return fmt.Errorf("setting `mount_ip_addresses`: %+v", err)
-			}
-		}
 		if err := d.Set("mount_targets", flattenNetAppVolumeMountTargets(props.MountTargets)); err != nil {
 			return fmt.Errorf("setting `mount_targets`: %+v", err)
 		}
@@ -1568,21 +1554,6 @@ func flattenNetAppVolumeExportPolicyRule(input *volumes.VolumePropertiesExportPo
 		}
 
 		results = append(results, result)
-	}
-
-	return results
-}
-
-func flattenNetAppVolumeMountIPAddresses(input *[]volumes.MountTargetProperties) []interface{} {
-	results := make([]interface{}, 0)
-	if input == nil {
-		return results
-	}
-
-	for _, item := range *input {
-		if item.IPAddress != nil {
-			results = append(results, item.IPAddress)
-		}
 	}
 
 	return results
