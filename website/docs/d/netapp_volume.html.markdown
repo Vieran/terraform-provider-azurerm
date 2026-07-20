@@ -111,7 +111,7 @@ A `mount_target` block exports the following:
 
 * `ip_address` - The IP address of the mount target.
 
-* `smb_server_fqdn` - The SMB server's Fully Qualified Domain Name (FQDN).
+* `smb_server_fqdn` - The SMB server's Fully Qualified Domain Name (FQDN). This value is populated when the volume's `protocols` include `CIFS`; otherwise, it is empty.
 
 ## Timeouts
 
