@@ -4,6 +4,7 @@
 package securitycenter
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -92,6 +93,15 @@ func resourceAdvancedThreatProtectionCreateUpdate(d *pluginsdk.ResourceData, met
 		return fmt.Errorf("updating Advanced Threat protection for %q: %+v", id.TargetResourceID, err)
 	}
 
+	if err := waitForAdvancedThreatProtectionState(ctx, client, id.TargetResourceID, d.Get("enabled").(bool)); err != nil {
+		return err
+	}
+
+	d.SetId(id.ID())
+	return resourceAdvancedThreatProtectionRead(d, meta)
+}
+
+func waitForAdvancedThreatProtectionState(ctx context.Context, client *security.AdvancedThreatProtectionClient, targetResourceID string, enabled bool) error {
 	deadline, ok := ctx.Deadline()
 	if !ok {
 		return fmt.Errorf("internal-error: context had no deadline")
@@ -102,17 +112,16 @@ func resourceAdvancedThreatProtectionCreateUpdate(d *pluginsdk.ResourceData, met
 		Pending: []string{"diff"},
 		Target:  []string{"consistent"},
 		Refresh: func() (result interface{}, state string, err error) {
-			resp, err := client.Get(ctx, id.TargetResourceID)
+			resp, err := client.Get(ctx, targetResourceID)
 			if err != nil {
 				return resp, "error", err
 			}
 			if atpp := resp.AdvancedThreatProtectionProperties; atpp != nil {
 				respEnabled := atpp.IsEnabled != nil && *atpp.IsEnabled
-				if respEnabled == d.Get("enabled").(bool) {
+				if respEnabled == enabled {
 					return resp, "consistent", nil
-				} else {
-					return resp, "diff", nil
 				}
+				return resp, "diff", nil
 			}
 			return resp, "error", errors.New("properties was nil")
 		},
@@ -125,8 +134,7 @@ func resourceAdvancedThreatProtectionCreateUpdate(d *pluginsdk.ResourceData, met
 		return fmt.Errorf("waiting for provisioning state of advanced threat protection: %+v", err)
 	}
 
-	d.SetId(id.ID())
-	return resourceAdvancedThreatProtectionRead(d, meta)
+	return nil
 }
 
 func resourceAdvancedThreatProtectionRead(d *pluginsdk.ResourceData, meta interface{}) error {
@@ -179,5 +187,5 @@ func resourceAdvancedThreatProtectionDelete(d *pluginsdk.ResourceData, meta inte
 		return fmt.Errorf("removing Advanced Threat Protection for %q: %+v", id.TargetResourceID, err)
 	}
 
-	return nil
+	return waitForAdvancedThreatProtectionState(ctx, client, id.TargetResourceID, false)
 }
