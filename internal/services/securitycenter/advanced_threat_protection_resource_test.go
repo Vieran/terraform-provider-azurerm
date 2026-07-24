@@ -86,11 +86,11 @@ func checkAdvancedThreatProtectionIsFalse(ctx context.Context, clients *clients.
 		return fmt.Errorf("reading Advanced Threat Protection (%s): %+v", targetResourceID, err)
 	}
 
-	if resp.AdvancedThreatProtectionProperties == nil || resp.AdvancedThreatProtectionProperties.IsEnabled == nil {
+	if resp.AdvancedThreatProtectionProperties == nil || resp.IsEnabled == nil {
 		return fmt.Errorf("Advanced Threat Protection (%s) properties is nil", targetResourceID)
 	}
 
-	if *resp.AdvancedThreatProtectionProperties.IsEnabled {
+	if *resp.IsEnabled {
 		return fmt.Errorf("Advanced Threat Protection (%s) properties is still enabled", targetResourceID)
 	}
 
