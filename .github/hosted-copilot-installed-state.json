@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "packageIdentity": "terraform-azurerm-hosted-copilot",
+  "commit": "ad810007302c8ae59ea33e68af7e4af9d87f95e3",
+  "manifestHash": "968fda19fe2fd3745e66f2735d7bf5bc49a2d95f465c70ff53a05fea4ef6eb8c",
+  "files": [
+    {
+      "targetPath": ".github/copilot-instructions.md",
+      "hash": "0f286ad1b879364a5a1e469af43b8f2c61cd7088a973742687e0586f78f98c68"
+    },
+    {
+      "targetPath": ".github/instructions/azurerm-go.instructions.md",
+      "hash": "8e69823601a1fbb003ff92fb7c186c8fb07f69dd9dba58ef9c8d6ea818b9825e"
+    },
+    {
+      "targetPath": ".github/instructions/azurerm-tests.instructions.md",
+      "hash": "4da69d6d6cba21a88e0a35dcfa3d8b50d85fd9a083ec108b0611289bed39742e"
+    },
+    {
+      "targetPath": ".github/instructions/azurerm-docs.instructions.md",
+      "hash": "c8fe7ef9150ddb81e2ae1f10a4fcf45d03d0cd3a1265dc33da066b8ffc34f480"
+    },
+    {
+      "targetPath": ".github/skills/code-review/SKILL.md",
+      "hash": "01a9945b8e5ed6cda99af252d501a8053e36907fcb138b7617c0edb7b5da1fbc"
+    },
+    {
+      "targetPath": "docs/HOSTED_COPILOT_CODE_REVIEW.md",
+      "hash": "ca930972fd857315d07697b3264a073cb6103fee82afcafde6df28f5981a7bab"
+    }
+  ]
+}
