@@ -12,7 +12,7 @@ Manages a Container App Environment Storage.
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "azurerm_resource_group" "example" {
   name     = "example-resources"
   location = "West Europe"
@@ -61,9 +61,9 @@ resource "azurerm_container_app_environment_storage" "example" {
 
 The following arguments are supported:
 
-* `name` - (Required) The name for this Container App Environment Storage. Changing this forces a new resource to be created.
-
 * `container_app_environment_id` - (Required) The ID of the Container App Environment to which this storage belongs. Changing this forces a new resource to be created.
+
+* `name` - (Required) The name for this Container App Environment Storage. Changing this forces a new resource to be created.
 
 * `account_name` - (Optional) The Azure Storage Account in which the Share to be used is located. Changing this forces a new resource to be created.
 
@@ -73,7 +73,7 @@ The following arguments are supported:
 
 * `access_mode` - (Required) The access mode to connect this storage to the Container App. Possible values include `ReadOnly` and `ReadWrite`. Changing this forces a new resource to be created.
 
-* `nfs_server_url` - (Optional) The NFS server to use for the Azure File Share, the format will be `yourstorageaccountname.file.core.windows.net`. Changing this forces a new resource to be created.
+* `nfs_server_url` - (Optional) The NFS server to use for the Azure File Share, the format will be `yourstorageaccountname.file.core.windows.net`.
 
 ## Attributes Reference
 
